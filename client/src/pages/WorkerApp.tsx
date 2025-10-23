@@ -60,6 +60,7 @@ export default function WorkerApp() {
         
         {currentView === 'request' && (
           <div className="max-w-4xl mx-auto">
+            <h1 className="text-2xl font-bold text-foreground mb-6">New Vacation Request</h1>
             <VacationRequestForm 
               availableWeeks={mockWorker.weeksEntitled}
               onSubmit={(first, second) => {

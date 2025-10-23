@@ -2,54 +2,46 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "lucide-react";
-import { format, startOfWeek, addWeeks } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+import { format, differenceInWeeks } from "date-fns";
+import { cn } from "@/lib/utils";
 
 interface VacationRequestFormProps {
   availableWeeks: number;
-  onSubmit?: (firstChoice: Date[], secondChoice: Date[]) => void;
+  onSubmit?: (firstChoice: { start: Date; end: Date }, secondChoice: { start: Date; end: Date }) => void;
 }
 
 export default function VacationRequestForm({ availableWeeks, onSubmit }: VacationRequestFormProps) {
-  const [firstChoice, setFirstChoice] = useState<Date[]>([]);
-  const [secondChoice, setSecondChoice] = useState<Date[]>([]);
+  const [firstStart, setFirstStart] = useState<Date>();
+  const [firstEnd, setFirstEnd] = useState<Date>();
+  const [secondStart, setSecondStart] = useState<Date>();
+  const [secondEnd, setSecondEnd] = useState<Date>();
 
-  // Generate 52 weeks for selection
-  const generateWeeks = () => {
-    const weeks = [];
-    const today = new Date();
-    const yearStart = new Date(today.getFullYear() + 1, 0, 1);
-    
-    for (let i = 0; i < 52; i++) {
-      const weekStart = addWeeks(startOfWeek(yearStart, { weekStartsOn: 1 }), i);
-      weeks.push(weekStart);
-    }
-    return weeks;
+  const calculateWeeks = (start?: Date, end?: Date) => {
+    if (!start || !end) return 0;
+    const weeks = Math.ceil(differenceInWeeks(end, start));
+    return weeks > 0 ? weeks : 0;
   };
 
-  const weeks = generateWeeks();
+  const firstChoiceWeeks = calculateWeeks(firstStart, firstEnd);
+  const secondChoiceWeeks = calculateWeeks(secondStart, secondEnd);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Submitting vacation request:', { firstChoice, secondChoice });
-    onSubmit?.(firstChoice, secondChoice);
+    if (!firstStart || !firstEnd || !secondStart || !secondEnd) return;
+    
+    console.log('Submitting vacation request:', {
+      first: { start: firstStart, end: firstEnd },
+      second: { start: secondStart, end: secondEnd }
+    });
+    onSubmit?.({ start: firstStart, end: firstEnd }, { start: secondStart, end: secondEnd });
   };
 
-  const toggleWeek = (week: Date, choice: 'first' | 'second') => {
-    const setter = choice === 'first' ? setFirstChoice : setSecondChoice;
-    const current = choice === 'first' ? firstChoice : secondChoice;
-    
-    const weekTime = week.getTime();
-    const isSelected = current.some(w => w.getTime() === weekTime);
-    
-    if (isSelected) {
-      setter(current.filter(w => w.getTime() !== weekTime));
-    } else {
-      if (current.length < availableWeeks) {
-        setter([...current, week]);
-      }
-    }
-  };
+  const nextYear = new Date().getFullYear() + 1;
+  const minDate = new Date(nextYear, 0, 1);
+  const maxDate = new Date(nextYear, 11, 31);
 
   return (
     <form onSubmit={handleSubmit}>
@@ -57,59 +49,169 @@ export default function VacationRequestForm({ availableWeeks, onSubmit }: Vacati
         <CardHeader>
           <CardTitle>Submit Vacation Request</CardTitle>
           <CardDescription>
-            Select your first and second choice weeks for {new Date().getFullYear() + 1} vacation.
+            Select your first and second choice date ranges for {nextYear} vacation.
             You are entitled to {availableWeeks} weeks.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="space-y-3">
-            <Label className="text-base">
-              First Choice ({firstChoice.length}/{availableWeeks} weeks selected)
+          {/* First Choice */}
+          <div className="space-y-4">
+            <Label className="text-base font-medium">
+              First Choice {firstChoiceWeeks > 0 && `(${firstChoiceWeeks} ${firstChoiceWeeks === 1 ? 'week' : 'weeks'})`}
             </Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {weeks.slice(0, 26).map((week, idx) => (
-                <Button
-                  key={idx}
-                  type="button"
-                  variant={firstChoice.some(w => w.getTime() === week.getTime()) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => toggleWeek(week, 'first')}
-                  data-testid={`button-week-first-${idx}`}
-                  className="justify-start"
-                >
-                  <Calendar className="h-3 w-3 mr-2" />
-                  Week {idx + 1}
-                </Button>
-              ))}
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-12 justify-start text-left font-normal",
+                        !firstStart && "text-muted-foreground"
+                      )}
+                      data-testid="button-first-start-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {firstStart ? format(firstStart, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={firstStart}
+                      onSelect={setFirstStart}
+                      disabled={(date) => date < minDate || date > maxDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-12 justify-start text-left font-normal",
+                        !firstEnd && "text-muted-foreground"
+                      )}
+                      data-testid="button-first-end-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {firstEnd ? format(firstEnd, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={firstEnd}
+                      onSelect={setFirstEnd}
+                      disabled={(date) => {
+                        if (date < minDate || date > maxDate) return true;
+                        if (firstStart && date < firstStart) return true;
+                        return false;
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
+
+            {firstChoiceWeeks > availableWeeks && (
+              <p className="text-sm text-destructive">
+                Selected range exceeds your {availableWeeks} week entitlement
+              </p>
+            )}
           </div>
 
-          <div className="space-y-3">
-            <Label className="text-base">
-              Second Choice ({secondChoice.length}/{availableWeeks} weeks selected)
+          {/* Second Choice */}
+          <div className="space-y-4">
+            <Label className="text-base font-medium">
+              Second Choice {secondChoiceWeeks > 0 && `(${secondChoiceWeeks} ${secondChoiceWeeks === 1 ? 'week' : 'weeks'})`}
             </Label>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {weeks.slice(0, 26).map((week, idx) => (
-                <Button
-                  key={idx}
-                  type="button"
-                  variant={secondChoice.some(w => w.getTime() === week.getTime()) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => toggleWeek(week, 'second')}
-                  data-testid={`button-week-second-${idx}`}
-                  className="justify-start"
-                >
-                  <Calendar className="h-3 w-3 mr-2" />
-                  Week {idx + 1}
-                </Button>
-              ))}
+            
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">Start Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-12 justify-start text-left font-normal",
+                        !secondStart && "text-muted-foreground"
+                      )}
+                      data-testid="button-second-start-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {secondStart ? format(secondStart, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={secondStart}
+                      onSelect={setSecondStart}
+                      disabled={(date) => date < minDate || date > maxDate}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-sm text-muted-foreground">End Date</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full h-12 justify-start text-left font-normal",
+                        !secondEnd && "text-muted-foreground"
+                      )}
+                      data-testid="button-second-end-date"
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {secondEnd ? format(secondEnd, "PPP") : "Pick a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={secondEnd}
+                      onSelect={setSecondEnd}
+                      disabled={(date) => {
+                        if (date < minDate || date > maxDate) return true;
+                        if (secondStart && date < secondStart) return true;
+                        return false;
+                      }}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
+
+            {secondChoiceWeeks > availableWeeks && (
+              <p className="text-sm text-destructive">
+                Selected range exceeds your {availableWeeks} week entitlement
+              </p>
+            )}
           </div>
 
           <Button 
             type="submit" 
             className="w-full h-12"
-            disabled={firstChoice.length === 0 || secondChoice.length === 0}
+            disabled={
+              !firstStart || !firstEnd || !secondStart || !secondEnd ||
+              firstChoiceWeeks === 0 || secondChoiceWeeks === 0 ||
+              firstChoiceWeeks > availableWeeks || secondChoiceWeeks > availableWeeks
+            }
             data-testid="button-submit-request"
           >
             Submit Vacation Request
