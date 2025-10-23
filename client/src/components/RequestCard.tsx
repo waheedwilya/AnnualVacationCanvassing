@@ -16,6 +16,11 @@ interface VacationRequest {
   status: RequestStatus;
   hasConflict?: boolean;
   conflictDetails?: string;
+  firstChoiceStart?: string;
+  firstChoiceEnd?: string;
+  secondChoiceStart?: string;
+  secondChoiceEnd?: string;
+  allocatedChoice?: string | null;
 }
 
 interface RequestCardProps {
@@ -58,40 +63,70 @@ export default function RequestCard({
           </div>
         )}
 
-        <div className="space-y-2">
-          <div>
-            <p className="text-sm font-medium text-foreground mb-2">First Choice:</p>
-            <div className="flex flex-wrap gap-1">
-              {request.requestedWeeks
-                .filter(w => w.choice === 'first')
-                .map((w, idx) => (
-                  <span 
-                    key={idx}
-                    className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium"
-                    data-testid={`week-first-${w.week}`}
-                  >
-                    Week {w.week}
+        <div className="space-y-3">
+          {request.firstChoiceStart && request.firstChoiceEnd && request.secondChoiceStart && request.secondChoiceEnd ? (
+            <>
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">First Choice:</p>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(request.firstChoiceStart), 'MMM d, yyyy')} - {format(new Date(request.firstChoiceEnd), 'MMM d, yyyy')}
+                </p>
+                {request.allocatedChoice === 'first' && (
+                  <span className="inline-flex items-center px-2 py-1 mt-2 rounded-md bg-success/10 text-success text-xs font-medium">
+                    Allocated
                   </span>
-                ))}
-            </div>
-          </div>
-          
-          <div>
-            <p className="text-sm font-medium text-foreground mb-2">Second Choice:</p>
-            <div className="flex flex-wrap gap-1">
-              {request.requestedWeeks
-                .filter(w => w.choice === 'second')
-                .map((w, idx) => (
-                  <span 
-                    key={idx}
-                    className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs font-medium"
-                    data-testid={`week-second-${w.week}`}
-                  >
-                    Week {w.week}
+                )}
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Second Choice:</p>
+                <p className="text-sm text-muted-foreground">
+                  {format(new Date(request.secondChoiceStart), 'MMM d, yyyy')} - {format(new Date(request.secondChoiceEnd), 'MMM d, yyyy')}
+                </p>
+                {request.allocatedChoice === 'second' && (
+                  <span className="inline-flex items-center px-2 py-1 mt-2 rounded-md bg-success/10 text-success text-xs font-medium">
+                    Allocated
                   </span>
-                ))}
-            </div>
-          </div>
+                )}
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">First Choice:</p>
+                <div className="flex flex-wrap gap-1">
+                  {request.requestedWeeks
+                    .filter(w => w.choice === 'first')
+                    .map((w, idx) => (
+                      <span 
+                        key={idx}
+                        className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium"
+                        data-testid={`week-first-${w.week}`}
+                      >
+                        Week {w.week}
+                      </span>
+                    ))}
+                </div>
+              </div>
+              
+              <div>
+                <p className="text-sm font-medium text-foreground mb-2">Second Choice:</p>
+                <div className="flex flex-wrap gap-1">
+                  {request.requestedWeeks
+                    .filter(w => w.choice === 'second')
+                    .map((w, idx) => (
+                      <span 
+                        key={idx}
+                        className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs font-medium"
+                        data-testid={`week-second-${w.week}`}
+                      >
+                        Week {w.week}
+                      </span>
+                    ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {showActions && request.status === 'pending' && (

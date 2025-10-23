@@ -1,39 +1,69 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Home, FileText, Calendar, User } from "lucide-react";
 import WorkerDashboard from "@/components/WorkerDashboard";
 import VacationRequestForm from "@/components/VacationRequestForm";
 import MyRequestsList from "@/components/MyRequestsList";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import type { Worker, VacationRequest } from "@shared/schema";
+import { differenceInYears } from "date-fns";
 
 type WorkerView = 'dashboard' | 'request' | 'my-requests' | 'profile';
 
 export default function WorkerApp() {
   const [currentView, setCurrentView] = useState<WorkerView>('dashboard');
-
-  // Mock data - todo: remove mock functionality
-  const mockWorker = {
-    name: "Andy Stouffer",
-    joiningDate: new Date('1988-04-04'),
-    yearsOfService: 37,
-    weeksEntitled: 6,
-    department: "Assembly Line A"
-  };
-
-  const mockRequests = [
-    {
-      id: '1',
-      choice: 'first' as const,
-      weeks: [12, 13, 14, 15, 16, 17],
-      status: 'awarded_first' as const,
-      submittedDate: new Date('2024-12-15'),
+  
+  // For demo purposes, we'll use the first worker from the API
+  // In a real app, this would come from authentication
+  const { data: workers } = useQuery<Worker[]>({
+    queryKey: ['/api/workers'],
+  });
+  
+  const currentWorker = workers?.[0];
+  const workerId = currentWorker?.id;
+  
+  // Fetch vacation requests for this worker
+  const { data: vacationRequests = [] } = useQuery<VacationRequest[]>({
+    queryKey: ['/api/vacation-requests', { workerId }],
+    enabled: !!workerId,
+  });
+  
+  // Submit vacation request mutation
+  const submitRequest = useMutation({
+    mutationFn: async (data: {
+      firstChoiceStart: string;
+      firstChoiceEnd: string;
+      secondChoiceStart: string;
+      secondChoiceEnd: string;
+    }) => {
+      if (!workerId) throw new Error("Worker ID not found");
+      
+      const response = await apiRequest('POST', '/api/vacation-requests', {
+        workerId,
+        year: 2026,
+        ...data,
+        status: 'pending',
+        allocatedChoice: null
+      });
+      return response.json();
     },
-    {
-      id: '2',
-      choice: 'second' as const,
-      weeks: [26, 27, 28, 29, 30, 31],
-      status: 'pending' as const,
-      submittedDate: new Date('2024-12-15'),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/vacation-requests'] });
+      setCurrentView('my-requests');
     },
-  ];
+  });
+
+  if (!currentWorker) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  const yearsOfService = differenceInYears(new Date(), new Date(currentWorker.joiningDate));
+  const pendingRequests = vacationRequests.filter(r => r.status === 'pending').length;
+  const approvedRequests = vacationRequests.filter(r => r.status === 'approved').length;
 
   const navItems = [
     { id: 'dashboard' as const, label: 'Home', icon: Home },
@@ -48,13 +78,13 @@ export default function WorkerApp() {
       <main className="flex-1 overflow-auto p-6">
         {currentView === 'dashboard' && (
           <WorkerDashboard
-            workerName={mockWorker.name}
-            weeksEntitled={mockWorker.weeksEntitled}
-            weeksRequested={6}
-            weeksApproved={4}
-            submissionDeadline={new Date('2025-01-10')}
-            pendingRequests={2}
-            approvedRequests={4}
+            workerName={currentWorker.name}
+            weeksEntitled={currentWorker.weeksEntitled}
+            weeksRequested={vacationRequests.length * currentWorker.weeksEntitled}
+            weeksApproved={approvedRequests * currentWorker.weeksEntitled}
+            submissionDeadline={new Date('2025-12-31')}
+            pendingRequests={pendingRequests}
+            approvedRequests={approvedRequests}
           />
         )}
         
@@ -62,10 +92,14 @@ export default function WorkerApp() {
           <div className="max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold text-foreground mb-6">New Vacation Request</h1>
             <VacationRequestForm 
-              availableWeeks={mockWorker.weeksEntitled}
+              availableWeeks={currentWorker.weeksEntitled}
               onSubmit={(first, second) => {
-                console.log('Request submitted', { first, second });
-                setCurrentView('my-requests');
+                submitRequest.mutate({
+                  firstChoiceStart: first.start.toISOString().split('T')[0],
+                  firstChoiceEnd: first.end.toISOString().split('T')[0],
+                  secondChoiceStart: second.start.toISOString().split('T')[0],
+                  secondChoiceEnd: second.end.toISOString().split('T')[0],
+                });
               }}
             />
           </div>
@@ -74,7 +108,21 @@ export default function WorkerApp() {
         {currentView === 'my-requests' && (
           <div className="max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold text-foreground mb-6">My Vacation Requests</h1>
-            <MyRequestsList requests={mockRequests} />
+            <MyRequestsList requests={vacationRequests.map(req => ({
+              id: req.id,
+              choice: (req.allocatedChoice === 'first' || req.allocatedChoice === 'second') 
+                ? req.allocatedChoice 
+                : undefined as any,
+              weeks: [],
+              status: req.status === 'approved' 
+                ? (req.allocatedChoice === 'first' ? 'awarded_first' : 'awarded_second')
+                : req.status as any,
+              submittedDate: new Date(req.submittedAt),
+              firstChoiceStart: req.firstChoiceStart,
+              firstChoiceEnd: req.firstChoiceEnd,
+              secondChoiceStart: req.secondChoiceStart,
+              secondChoiceEnd: req.secondChoiceEnd,
+            }))} />
           </div>
         )}
         
@@ -84,25 +132,25 @@ export default function WorkerApp() {
             <div className="space-y-6">
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Name</p>
-                <p className="text-lg font-medium text-foreground">{mockWorker.name}</p>
+                <p className="text-lg font-medium text-foreground">{currentWorker.name}</p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Joining Date</p>
                 <p className="text-lg font-medium text-foreground">
-                  {mockWorker.joiningDate.toLocaleDateString()}
+                  {new Date(currentWorker.joiningDate).toLocaleDateString()}
                 </p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Years of Service</p>
-                <p className="text-lg font-medium text-foreground">{mockWorker.yearsOfService} years</p>
+                <p className="text-lg font-medium text-foreground">{yearsOfService} years</p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Department</p>
-                <p className="text-lg font-medium text-foreground">{mockWorker.department}</p>
+                <p className="text-lg font-medium text-foreground">{currentWorker.department}</p>
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Vacation Entitlement</p>
-                <p className="text-lg font-medium text-primary">{mockWorker.weeksEntitled} weeks</p>
+                <p className="text-lg font-medium text-primary">{currentWorker.weeksEntitled} weeks</p>
               </div>
             </div>
           </div>
@@ -123,11 +171,11 @@ export default function WorkerApp() {
                 className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
                   isActive 
                     ? 'text-primary' 
-                    : 'text-muted-foreground hover-elevate'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
                 data-testid={`nav-${item.id}`}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-6 w-6" />
                 <span className="text-xs font-medium">{item.label}</span>
               </button>
             );
