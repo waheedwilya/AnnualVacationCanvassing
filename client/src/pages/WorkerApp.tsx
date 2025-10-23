@@ -6,7 +6,7 @@ import VacationRequestForm from "@/components/VacationRequestForm";
 import MyRequestsList from "@/components/MyRequestsList";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Worker, VacationRequest } from "@shared/schema";
-import { differenceInYears } from "date-fns";
+import { differenceInYears, format } from "date-fns";
 
 type WorkerView = 'dashboard' | 'request' | 'my-requests' | 'profile';
 
@@ -24,7 +24,7 @@ export default function WorkerApp() {
   
   // Fetch vacation requests for this worker
   const { data: vacationRequests = [] } = useQuery<VacationRequest[]>({
-    queryKey: ['/api/vacation-requests', { workerId }],
+    queryKey: [`/api/vacation-requests?workerId=${workerId}`],
     enabled: !!workerId,
   });
   
@@ -48,6 +48,7 @@ export default function WorkerApp() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/vacation-requests?workerId=${workerId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/vacation-requests'] });
       setCurrentView('my-requests');
     },
@@ -95,10 +96,10 @@ export default function WorkerApp() {
               availableWeeks={currentWorker.weeksEntitled}
               onSubmit={(first, second) => {
                 submitRequest.mutate({
-                  firstChoiceStart: first.start.toISOString().split('T')[0],
-                  firstChoiceEnd: first.end.toISOString().split('T')[0],
-                  secondChoiceStart: second.start.toISOString().split('T')[0],
-                  secondChoiceEnd: second.end.toISOString().split('T')[0],
+                  firstChoiceStart: format(first.start, 'yyyy-MM-dd'),
+                  firstChoiceEnd: format(first.end, 'yyyy-MM-dd'),
+                  secondChoiceStart: format(second.start, 'yyyy-MM-dd'),
+                  secondChoiceEnd: format(second.end, 'yyyy-MM-dd'),
                 });
               }}
             />
