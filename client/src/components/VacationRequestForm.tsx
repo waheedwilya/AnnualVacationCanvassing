@@ -39,9 +39,9 @@ export default function VacationRequestForm({ availableWeeks, onSubmit }: Vacati
     onSubmit?.({ start: firstStart, end: firstEnd }, { start: secondStart, end: secondEnd });
   };
 
-  const nextYear = new Date().getFullYear() + 1;
-  const minDate = new Date(nextYear, 0, 1);
-  const maxDate = new Date(nextYear, 11, 31);
+  const minDate = new Date(2026, 0, 1);
+  const maxDate = new Date(2026, 11, 31);
+  const defaultMonth = new Date(2026, 0);
 
   return (
     <form onSubmit={handleSubmit}>
@@ -49,7 +49,7 @@ export default function VacationRequestForm({ availableWeeks, onSubmit }: Vacati
         <CardHeader>
           <CardTitle>Submit Vacation Request</CardTitle>
           <CardDescription>
-            Select your first and second choice date ranges for {nextYear} vacation.
+            Select your first and second choice date ranges for 2026 vacation.
             You are entitled to {availableWeeks} weeks.
           </CardDescription>
         </CardHeader>
@@ -83,6 +83,7 @@ export default function VacationRequestForm({ availableWeeks, onSubmit }: Vacati
                       selected={firstStart}
                       onSelect={setFirstStart}
                       disabled={(date) => date < minDate || date > maxDate}
+                      defaultMonth={defaultMonth}
                       initialFocus
                     />
                   </PopoverContent>
@@ -115,6 +116,7 @@ export default function VacationRequestForm({ availableWeeks, onSubmit }: Vacati
                         if (firstStart && date < firstStart) return true;
                         return false;
                       }}
+                      defaultMonth={defaultMonth}
                       initialFocus
                     />
                   </PopoverContent>
@@ -158,6 +160,7 @@ export default function VacationRequestForm({ availableWeeks, onSubmit }: Vacati
                       selected={secondStart}
                       onSelect={setSecondStart}
                       disabled={(date) => date < minDate || date > maxDate}
+                      defaultMonth={defaultMonth}
                       initialFocus
                     />
                   </PopoverContent>
@@ -190,6 +193,7 @@ export default function VacationRequestForm({ availableWeeks, onSubmit }: Vacati
                         if (secondStart && date < secondStart) return true;
                         return false;
                       }}
+                      defaultMonth={defaultMonth}
                       initialFocus
                     />
                   </PopoverContent>
