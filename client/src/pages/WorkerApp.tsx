@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Home, FileText, Calendar, User } from "lucide-react";
+import { Home, FileText, Calendar, User, Shield } from "lucide-react";
+import { Link } from "wouter";
 import WorkerDashboard from "@/components/WorkerDashboard";
 import VacationRequestForm from "@/components/VacationRequestForm";
 import MyRequestsList from "@/components/MyRequestsList";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
 import type { Worker, VacationRequest } from "@shared/schema";
 import { differenceInYears, format } from "date-fns";
 
@@ -75,6 +77,17 @@ export default function WorkerApp() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
+      {/* Header with role switcher */}
+      <header className="border-b bg-card px-6 py-3 flex items-center justify-between">
+        <h1 className="text-lg font-semibold text-foreground">Worker Portal</h1>
+        <Link href="/supervisor">
+          <Button variant="outline" size="sm" data-testid="link-supervisor">
+            <Shield className="w-4 h-4 mr-2" />
+            Switch to Supervisor
+          </Button>
+        </Link>
+      </header>
+      
       {/* Main Content */}
       <main className="flex-1 overflow-auto p-6">
         {currentView === 'dashboard' && (

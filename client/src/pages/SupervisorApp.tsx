@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Link } from "wouter";
+import { User } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import SupervisorDashboard from "@/components/SupervisorDashboard";
 import RequestCard from "@/components/RequestCard";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -123,11 +126,19 @@ export default function SupervisorApp() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card sticky top-0 z-10">
-        <div className="container mx-auto px-6 py-4">
-          <h1 className="text-2xl font-bold text-foreground">Supervisor Portal</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage vacation requests for 2026
-          </p>
+        <div className="container mx-auto px-6 py-4 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">Supervisor Portal</h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Manage vacation requests for 2026
+            </p>
+          </div>
+          <Link href="/">
+            <Button variant="outline" size="sm" data-testid="link-worker">
+              <User className="w-4 h-4 mr-2" />
+              Switch to Worker
+            </Button>
+          </Link>
         </div>
       </header>
 
