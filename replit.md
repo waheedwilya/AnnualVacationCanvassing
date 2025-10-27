@@ -9,6 +9,23 @@ This is a factory worker vacation request and approval system with seniority-bas
 
 The system is designed for efficiency and accessibility, particularly for use on the factory floor with large touch targets and clear status indicators.
 
+## Recent Changes (October 27, 2025)
+
+**Seniority-Based Vacation Entitlement System:**
+- Implemented dynamic vacation week calculation based on years of service
+- Created shared utility function `calculateVacationWeeks()` in `shared/utils.ts`
+- Seniority rules:
+  - 0 weeks: Less than 1 year of service (not eligible)
+  - 2 weeks: After 1 year of service
+  - 3 weeks: After 3 years of service
+  - 4 weeks: After 10 years of service
+  - 5 weeks: After 25 years of service
+  - 6 weeks: After 35 years of service
+- Updated frontend (WorkerApp) to display calculated entitlement
+- Updated backend validation to enforce seniority-based limits
+- Added user-friendly messages explaining entitlement based on seniority
+- **Note:** Legacy `weeksEntitled` database field still exists but is now ignored in favor of calculated values
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.
@@ -85,6 +102,8 @@ Preferred communication style: Simple, everyday language.
 - Designed to be swapped for PostgreSQL implementation in production
 
 **Design Decision**: The storage layer uses an interface pattern to allow easy switching between in-memory storage (development/testing) and PostgreSQL (production) without changing business logic.
+
+**Seniority Calculation**: Vacation entitlement is calculated dynamically using `calculateVacationWeeks()` from `shared/utils.ts` based on the worker's joining date. This ensures consistent calculation between frontend display and backend validation. The legacy `weeksEntitled` field in the database is currently ignored but could be deprecated in a future update.
 
 ### Authentication and Authorization
 
