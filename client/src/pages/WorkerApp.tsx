@@ -9,6 +9,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import type { Worker, VacationRequest } from "@shared/schema";
 import { differenceInYears, format } from "date-fns";
+import { calculateVacationWeeks, getVacationEntitlementDescription } from "@shared/utils";
 
 type WorkerView = 'dashboard' | 'request' | 'my-requests' | 'profile';
 
@@ -65,6 +66,7 @@ export default function WorkerApp() {
   }
 
   const yearsOfService = differenceInYears(new Date(), new Date(currentWorker.joiningDate));
+  const weeksEntitled = calculateVacationWeeks(currentWorker.joiningDate);
   const pendingRequests = vacationRequests.filter(r => r.status === 'pending').length;
   const approvedRequests = vacationRequests.filter(r => r.status === 'approved').length;
 
@@ -93,9 +95,9 @@ export default function WorkerApp() {
         {currentView === 'dashboard' && (
           <WorkerDashboard
             workerName={currentWorker.name}
-            weeksEntitled={currentWorker.weeksEntitled}
-            weeksRequested={vacationRequests.length * currentWorker.weeksEntitled}
-            weeksApproved={approvedRequests * currentWorker.weeksEntitled}
+            weeksEntitled={weeksEntitled}
+            weeksRequested={vacationRequests.length * weeksEntitled}
+            weeksApproved={approvedRequests * weeksEntitled}
             submissionDeadline={new Date('2025-12-31')}
             pendingRequests={pendingRequests}
             approvedRequests={approvedRequests}
@@ -106,7 +108,7 @@ export default function WorkerApp() {
           <div className="max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold text-foreground mb-6">New Vacation Request</h1>
             <VacationRequestForm 
-              availableWeeks={currentWorker.weeksEntitled}
+              availableWeeks={weeksEntitled}
               onSubmit={(first, second) => {
                 submitRequest.mutate({
                   firstChoiceStart: format(first.start, 'yyyy-MM-dd'),
@@ -164,7 +166,9 @@ export default function WorkerApp() {
               </div>
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground">Vacation Entitlement</p>
-                <p className="text-lg font-medium text-primary">{currentWorker.weeksEntitled} weeks</p>
+                <p className="text-lg font-medium text-primary">
+                  {getVacationEntitlementDescription(yearsOfService, weeksEntitled)}
+                </p>
               </div>
             </div>
           </div>

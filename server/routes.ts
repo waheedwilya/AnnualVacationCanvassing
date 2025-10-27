@@ -2,6 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertWorkerSchema, insertVacationRequestSchema } from "@shared/schema";
+import { calculateVacationWeeks } from "@shared/utils";
 
 // Helper function to calculate weeks between dates
 // For Monday-Sunday weeks: Mon to Sun = 7 days = 1 week
@@ -224,19 +225,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Worker not found" });
       }
       
+      // Calculate seniority-based entitlement
+      const weeksEntitled = calculateVacationWeeks(worker.joiningDate);
+      
+      // Check if worker is eligible for vacation (needs at least 1 year)
+      if (weeksEntitled === 0) {
+        return res.status(400).json({ 
+          error: "Not eligible for vacation. You need at least 1 year of service." 
+        });
+      }
+      
       // Calculate weeks for both choices
       const firstChoiceWeeks = calculateWeeks(validatedData.firstChoiceStart, validatedData.firstChoiceEnd);
       const secondChoiceWeeks = calculateWeeks(validatedData.secondChoiceStart, validatedData.secondChoiceEnd);
       
-      // Validate against entitlement
-      if (firstChoiceWeeks > worker.weeksEntitled) {
+      // Validate against seniority-based entitlement
+      if (firstChoiceWeeks > weeksEntitled) {
         return res.status(400).json({ 
-          error: `First choice (${firstChoiceWeeks} weeks) exceeds entitlement (${worker.weeksEntitled} weeks)` 
+          error: `First choice (${firstChoiceWeeks} weeks) exceeds entitlement (${weeksEntitled} weeks)` 
         });
       }
-      if (secondChoiceWeeks > worker.weeksEntitled) {
+      if (secondChoiceWeeks > weeksEntitled) {
         return res.status(400).json({ 
-          error: `Second choice (${secondChoiceWeeks} weeks) exceeds entitlement (${worker.weeksEntitled} weeks)` 
+          error: `Second choice (${secondChoiceWeeks} weeks) exceeds entitlement (${weeksEntitled} weeks)` 
         });
       }
       
