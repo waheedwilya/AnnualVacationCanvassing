@@ -32,7 +32,19 @@ const statusConfig = {
 };
 
 export default function StatusBadge({ status, className }: StatusBadgeProps) {
-  const config = statusConfig[status];
+  const config = statusConfig[status as keyof typeof statusConfig];
+  
+  // Fallback for unknown status
+  if (!config) {
+    return (
+      <Badge 
+        className={cn("bg-muted text-muted-foreground", className)}
+        data-testid={`badge-status-${status}`}
+      >
+        {status}
+      </Badge>
+    );
+  }
   
   return (
     <Badge 

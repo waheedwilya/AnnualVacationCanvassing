@@ -74,8 +74,22 @@ export default function SupervisorApp() {
   // Create worker map for quick lookup
   const workerMap = new Map(workers.map(w => [w.id, w]));
 
+  // Normalize all vacation requests to have display status
+  const normalizedRequests = vacationRequests.map(req => {
+    let displayStatus: 'pending' | 'approved' | 'denied';
+    if (req.status === 'approved' && req.allocatedChoice) {
+      displayStatus = 'approved';
+    } else if (req.status === 'approved' && !req.allocatedChoice) {
+      // Approved without allocation - treat as pending
+      displayStatus = 'pending';
+    } else {
+      displayStatus = req.status as 'pending' | 'approved' | 'denied';
+    }
+    return { ...req, displayStatus };
+  });
+
   // Filter requests by department
-  const filteredRequests = vacationRequests.filter(req => {
+  const filteredRequests = normalizedRequests.filter(req => {
     if (selectedDepartment === 'all') return true;
     const worker = workerMap.get(req.workerId);
     return worker?.department === selectedDepartment;
@@ -84,15 +98,15 @@ export default function SupervisorApp() {
   // Get unique departments
   const departments = Array.from(new Set(workers.map(w => w.department)));
 
-  // Calculate stats
-  const totalRequests = vacationRequests.length;
-  const pendingRequests = vacationRequests.filter(r => r.status === 'pending').length;
-  const approvedRequests = vacationRequests.filter(r => r.status === 'approved').length;
+  // Calculate stats using display status
+  const totalRequests = normalizedRequests.length;
+  const pendingRequests = normalizedRequests.filter(r => r.displayStatus === 'pending').length;
+  const approvedRequests = normalizedRequests.filter(r => r.displayStatus === 'approved').length;
   const conflicts = conflictsData?.totalConflicts || 0;
 
-  // Separate requests by status
-  const pending = filteredRequests.filter(r => r.status === 'pending');
-  const approved = filteredRequests.filter(r => r.status === 'approved');
+  // Separate requests by display status
+  const pending = filteredRequests.filter(r => r.displayStatus === 'pending');
+  const approved = filteredRequests.filter(r => r.displayStatus === 'approved');
   const allFiltered = filteredRequests;
 
   // Convert vacation requests to the format expected by RequestCard
@@ -103,6 +117,18 @@ export default function SupervisorApp() {
 
       const yearsOfService = differenceInYears(new Date(), new Date(worker.joiningDate));
       
+      // Convert status to proper display status
+      let displayStatus: RequestStatus;
+      if (req.status === 'approved' && req.allocatedChoice) {
+        // Approved requests with allocation show which choice was awarded
+        displayStatus = req.allocatedChoice === 'second' ? 'awarded_second' : 'awarded_first';
+      } else if (req.status === 'approved' && !req.allocatedChoice) {
+        // Approved but not allocated (edge case/legacy data) - treat as pending
+        displayStatus = 'pending';
+      } else {
+        displayStatus = req.status as RequestStatus;
+      }
+      
       return {
         id: req.id,
         workerName: worker.name,
@@ -111,7 +137,7 @@ export default function SupervisorApp() {
         weeksOfVacation: worker.weeksEntitled,
         department: worker.department,
         requestedWeeks: [], // Not used anymore, we show dates
-        status: req.status as RequestStatus,
+        status: displayStatus,
         hasConflict: false, // We'll add this later if needed
         conflictDetails: undefined,
         firstChoiceStart: req.firstChoiceStart,

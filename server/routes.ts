@@ -4,11 +4,14 @@ import { storage } from "./storage";
 import { insertWorkerSchema, insertVacationRequestSchema } from "@shared/schema";
 
 // Helper function to calculate weeks between dates
+// For Monday-Sunday weeks: Mon to Sun = 7 days = 1 week
 function calculateWeeks(startDate: string, endDate: string): number {
   const start = new Date(startDate);
   const end = new Date(endDate);
   const diffTime = Math.abs(end.getTime() - start.getTime());
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // Add 1 to include both start and end dates
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  // Round up to handle partial weeks
   return Math.ceil(diffDays / 7);
 }
 
