@@ -140,10 +140,8 @@ export default function SupervisorApp() {
         status: displayStatus,
         hasConflict: false, // We'll add this later if needed
         conflictDetails: undefined,
-        firstChoiceStart: req.firstChoiceStart,
-        firstChoiceEnd: req.firstChoiceEnd,
-        secondChoiceStart: req.secondChoiceStart,
-        secondChoiceEnd: req.secondChoiceEnd,
+        firstChoiceWeeks: req.firstChoiceWeeks,
+        secondChoiceWeeks: req.secondChoiceWeeks,
         allocatedChoice: req.allocatedChoice,
       };
     }).filter(Boolean);
