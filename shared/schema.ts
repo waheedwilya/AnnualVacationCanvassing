@@ -16,11 +16,9 @@ export const vacationRequests = pgTable("vacation_requests", {
   workerId: varchar("worker_id").notNull().references(() => workers.id, { onDelete: "cascade" }),
   year: integer("year").notNull().default(2026),
   
-  firstChoiceStart: date("first_choice_start").notNull(),
-  firstChoiceEnd: date("first_choice_end").notNull(),
-  
-  secondChoiceStart: date("second_choice_start").notNull(),
-  secondChoiceEnd: date("second_choice_end").notNull(),
+  // Each choice is an array of week start dates (Monday of each week)
+  firstChoiceWeeks: text("first_choice_weeks").array().notNull(),
+  secondChoiceWeeks: text("second_choice_weeks").array().notNull(),
   
   status: text("status").notNull().default("pending"),
   allocatedChoice: text("allocated_choice"),
@@ -36,10 +34,8 @@ export const insertVacationRequestSchema = createInsertSchema(vacationRequests).
   id: true,
   submittedAt: true,
 }).extend({
-  firstChoiceStart: z.string(),
-  firstChoiceEnd: z.string(),
-  secondChoiceStart: z.string(),
-  secondChoiceEnd: z.string(),
+  firstChoiceWeeks: z.array(z.string()).min(1, "First choice must have at least one week"),
+  secondChoiceWeeks: z.array(z.string()).min(1, "Second choice must have at least one week"),
 });
 
 export type InsertWorker = z.infer<typeof insertWorkerSchema>;
