@@ -11,6 +11,19 @@ The system is designed for efficiency and accessibility, particularly for use on
 
 ## Recent Changes (October 27, 2025)
 
+**Multi-Week Selection Feature:**
+- Migrated from date range format to array-based format for vacation requests
+- Database schema updated:
+  - Added `firstChoiceWeeks` and `secondChoiceWeeks` as text arrays
+  - Removed legacy `firstChoiceStart/End` and `secondChoiceStart/End` columns
+  - Week dates stored as Monday start dates in 'yyyy-MM-dd' format
+- Created `MultiWeekPicker` component for selecting multiple non-contiguous weeks
+- Workers can now select separate individual weeks (e.g., Week 2, Week 5, Week 10) instead of continuous ranges
+- Updated conflict detection logic to use Set-based week overlap checking
+- Auto-allocate function now tracks allocated weeks using a Set for efficient conflict prevention
+- Updated display components (`MyRequestsList`, `RequestCard`) to show multiple selected weeks with date ranges
+- Backend validation counts total weeks across all selections to enforce entitlement limits
+
 **Seniority-Based Vacation Entitlement System:**
 - Implemented dynamic vacation week calculation based on years of service
 - Created shared utility function `calculateVacationWeeks()` in `shared/utils.ts`
