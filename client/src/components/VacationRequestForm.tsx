@@ -53,7 +53,15 @@ export default function VacationRequestForm({ availableWeeks, onSubmit }: Vacati
           <CardTitle>Submit Vacation Request</CardTitle>
           <CardDescription>
             Select your first and second choice weeks for 2026 vacation.
-            You are entitled to {availableWeeks} weeks.
+            {availableWeeks === 0 ? (
+              <span className="text-destructive font-medium block mt-2">
+                You need at least 1 year of service to be eligible for vacation.
+              </span>
+            ) : (
+              <span className="font-medium block mt-2">
+                You are entitled to {availableWeeks} {availableWeeks === 1 ? 'week' : 'weeks'} based on your seniority.
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
