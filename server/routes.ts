@@ -22,19 +22,11 @@ function isDateIn2026(dateStr: string): boolean {
   return date.getFullYear() === 2026;
 }
 
-// Helper function to check if two date ranges overlap
-function dateRangesOverlap(
-  start1: string, 
-  end1: string, 
-  start2: string, 
-  end2: string
-): boolean {
-  const s1 = new Date(start1);
-  const e1 = new Date(end1);
-  const s2 = new Date(start2);
-  const e2 = new Date(end2);
-  
-  return s1 <= e2 && s2 <= e1;
+// Helper function to check if two week arrays have any overlap
+function weeksOverlap(weeks1: string[], weeks2: string[]): boolean {
+  // Convert to Set for efficient lookup
+  const set1 = new Set(weeks1);
+  return weeks2.some(week => set1.has(week));
 }
 
 // Type for conflict information
@@ -48,8 +40,8 @@ interface ConflictInfo {
     conflictType: string; // e.g., "first-first", "first-second", etc.
   }>;
   choices: {
-    first: { start: string; end: string };
-    second: { start: string; end: string };
+    first: string[];
+    second: string[];
   };
 }
 
@@ -126,39 +118,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const conflictTypes: string[] = [];
         
         // Check all combinations of choices and record which ones conflict
-        if (dateRangesOverlap(
-          req1.firstChoiceStart, 
-          req1.firstChoiceEnd,
-          req2.firstChoiceStart,
-          req2.firstChoiceEnd
-        )) {
+        if (weeksOverlap(req1.firstChoiceWeeks, req2.firstChoiceWeeks)) {
           conflictTypes.push('first-first');
         }
         
-        if (dateRangesOverlap(
-          req1.firstChoiceStart, 
-          req1.firstChoiceEnd,
-          req2.secondChoiceStart,
-          req2.secondChoiceEnd
-        )) {
+        if (weeksOverlap(req1.firstChoiceWeeks, req2.secondChoiceWeeks)) {
           conflictTypes.push('first-second');
         }
         
-        if (dateRangesOverlap(
-          req1.secondChoiceStart, 
-          req1.secondChoiceEnd,
-          req2.firstChoiceStart,
-          req2.firstChoiceEnd
-        )) {
+        if (weeksOverlap(req1.secondChoiceWeeks, req2.firstChoiceWeeks)) {
           conflictTypes.push('second-first');
         }
         
-        if (dateRangesOverlap(
-          req1.secondChoiceStart, 
-          req1.secondChoiceEnd,
-          req2.secondChoiceStart,
-          req2.secondChoiceEnd
-        )) {
+        if (weeksOverlap(req1.secondChoiceWeeks, req2.secondChoiceWeeks)) {
           conflictTypes.push('second-second');
         }
         
@@ -180,14 +152,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           joiningDate: worker1.joiningDate,
           conflictingWith,
           choices: {
-            first: {
-              start: req1.firstChoiceStart,
-              end: req1.firstChoiceEnd
-            },
-            second: {
-              start: req1.secondChoiceStart,
-              end: req1.secondChoiceEnd
-            }
+            first: req1.firstChoiceWeeks,
+            second: req1.secondChoiceWeeks
           }
         });
       }
@@ -203,20 +169,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertVacationRequestSchema.parse(req.body);
       
-      // Validate dates are in 2026
-      if (!isDateIn2026(validatedData.firstChoiceStart) || 
-          !isDateIn2026(validatedData.firstChoiceEnd) ||
-          !isDateIn2026(validatedData.secondChoiceStart) || 
-          !isDateIn2026(validatedData.secondChoiceEnd)) {
-        return res.status(400).json({ error: "All dates must be in 2026" });
-      }
-      
-      // Validate start dates are before end dates
-      if (new Date(validatedData.firstChoiceStart) >= new Date(validatedData.firstChoiceEnd)) {
-        return res.status(400).json({ error: "First choice start date must be before end date" });
-      }
-      if (new Date(validatedData.secondChoiceStart) >= new Date(validatedData.secondChoiceEnd)) {
-        return res.status(400).json({ error: "Second choice start date must be before end date" });
+      // Validate all week dates are in 2026
+      const allWeeks = [...validatedData.firstChoiceWeeks, ...validatedData.secondChoiceWeeks];
+      if (!allWeeks.every(isDateIn2026)) {
+        return res.status(400).json({ error: "All weeks must be in 2026" });
       }
       
       // Get worker to check entitlement
@@ -235,25 +191,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Calculate weeks for both choices
-      const firstChoiceWeeks = calculateWeeks(validatedData.firstChoiceStart, validatedData.firstChoiceEnd);
-      const secondChoiceWeeks = calculateWeeks(validatedData.secondChoiceStart, validatedData.secondChoiceEnd);
+      // Validate week counts against entitlement
+      const firstChoiceWeekCount = validatedData.firstChoiceWeeks.length;
+      const secondChoiceWeekCount = validatedData.secondChoiceWeeks.length;
       
-      // Validate against seniority-based entitlement
-      if (firstChoiceWeeks > weeksEntitled) {
+      if (firstChoiceWeekCount > weeksEntitled) {
         return res.status(400).json({ 
-          error: `First choice (${firstChoiceWeeks} weeks) exceeds entitlement (${weeksEntitled} weeks)` 
+          error: `First choice (${firstChoiceWeekCount} weeks) exceeds entitlement (${weeksEntitled} weeks)` 
         });
       }
-      if (secondChoiceWeeks > weeksEntitled) {
+      if (secondChoiceWeekCount > weeksEntitled) {
         return res.status(400).json({ 
-          error: `Second choice (${secondChoiceWeeks} weeks) exceeds entitlement (${weeksEntitled} weeks)` 
+          error: `Second choice (${secondChoiceWeekCount} weeks) exceeds entitlement (${weeksEntitled} weeks)` 
         });
       }
       
       const request = await storage.createVacationRequest(validatedData);
       res.status(201).json(request);
     } catch (error) {
+      console.error('Error creating vacation request:', error);
       res.status(400).json({ error: "Invalid vacation request data" });
     }
   });
@@ -308,8 +264,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return new Date(a.worker.joiningDate).getTime() - new Date(b.worker.joiningDate).getTime();
       });
       
-      // Track allocated date ranges
-      const allocatedRanges: Array<{ start: string; end: string }> = [];
+      // Track allocated weeks
+      const allocatedWeeks = new Set<string>();
       const results: Array<{ requestId: string; status: string; allocatedChoice: string }> = [];
       
       // Process requests in seniority order
@@ -317,21 +273,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let allocated = false;
         
         // Try first choice
-        const firstChoiceConflicts = allocatedRanges.some(range =>
-          dateRangesOverlap(
-            request.firstChoiceStart,
-            request.firstChoiceEnd,
-            range.start,
-            range.end
-          )
-        );
+        const firstChoiceConflicts = request.firstChoiceWeeks.some(week => allocatedWeeks.has(week));
         
         if (!firstChoiceConflicts) {
           // Allocate first choice
-          allocatedRanges.push({
-            start: request.firstChoiceStart,
-            end: request.firstChoiceEnd
-          });
+          request.firstChoiceWeeks.forEach(week => allocatedWeeks.add(week));
           await storage.updateVacationRequestStatus(request.id, 'approved', 'first');
           results.push({ 
             requestId: request.id, 
@@ -341,21 +287,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           allocated = true;
         } else {
           // Try second choice
-          const secondChoiceConflicts = allocatedRanges.some(range =>
-            dateRangesOverlap(
-              request.secondChoiceStart,
-              request.secondChoiceEnd,
-              range.start,
-              range.end
-            )
-          );
+          const secondChoiceConflicts = request.secondChoiceWeeks.some(week => allocatedWeeks.has(week));
           
           if (!secondChoiceConflicts) {
             // Allocate second choice
-            allocatedRanges.push({
-              start: request.secondChoiceStart,
-              end: request.secondChoiceEnd
-            });
+            request.secondChoiceWeeks.forEach(week => allocatedWeeks.add(week));
             await storage.updateVacationRequestStatus(request.id, 'approved', 'second');
             results.push({ 
               requestId: request.id, 

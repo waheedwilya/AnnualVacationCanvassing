@@ -34,10 +34,8 @@ export default function WorkerApp() {
   // Submit vacation request mutation
   const submitRequest = useMutation({
     mutationFn: async (data: {
-      firstChoiceStart: string;
-      firstChoiceEnd: string;
-      secondChoiceStart: string;
-      secondChoiceEnd: string;
+      firstChoiceWeeks: string[];
+      secondChoiceWeeks: string[];
     }) => {
       if (!workerId) throw new Error("Worker ID not found");
       
@@ -109,12 +107,10 @@ export default function WorkerApp() {
             <h1 className="text-2xl font-bold text-foreground mb-6">New Vacation Request</h1>
             <VacationRequestForm 
               availableWeeks={weeksEntitled}
-              onSubmit={(first, second) => {
+              onSubmit={(firstWeeks, secondWeeks) => {
                 submitRequest.mutate({
-                  firstChoiceStart: format(first.start, 'yyyy-MM-dd'),
-                  firstChoiceEnd: format(first.end, 'yyyy-MM-dd'),
-                  secondChoiceStart: format(second.start, 'yyyy-MM-dd'),
-                  secondChoiceEnd: format(second.end, 'yyyy-MM-dd'),
+                  firstChoiceWeeks: firstWeeks.map(w => format(w, 'yyyy-MM-dd')),
+                  secondChoiceWeeks: secondWeeks.map(w => format(w, 'yyyy-MM-dd')),
                 });
               }}
             />
@@ -134,10 +130,8 @@ export default function WorkerApp() {
                 ? (req.allocatedChoice === 'first' ? 'awarded_first' : 'awarded_second')
                 : req.status as any,
               submittedDate: new Date(req.submittedAt),
-              firstChoiceStart: req.firstChoiceStart,
-              firstChoiceEnd: req.firstChoiceEnd,
-              secondChoiceStart: req.secondChoiceStart,
-              secondChoiceEnd: req.secondChoiceEnd,
+              firstChoiceWeeks: req.firstChoiceWeeks,
+              secondChoiceWeeks: req.secondChoiceWeeks,
             }))} />
           </div>
         )}

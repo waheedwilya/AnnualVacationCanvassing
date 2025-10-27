@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatusBadge, { type RequestStatus } from "./StatusBadge";
 import { Calendar } from "lucide-react";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 
 interface VacationRequest {
   id: string;
@@ -9,14 +9,32 @@ interface VacationRequest {
   weeks: number[];
   status: RequestStatus;
   submittedDate: Date;
-  firstChoiceStart?: string;
-  firstChoiceEnd?: string;
-  secondChoiceStart?: string;
-  secondChoiceEnd?: string;
+  firstChoiceWeeks?: string[];
+  secondChoiceWeeks?: string[];
 }
 
 interface MyRequestsListProps {
   requests: VacationRequest[];
+}
+
+function WeeksList({ weeks }: { weeks: string[] }) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {weeks.map((weekStart, idx) => {
+        const start = new Date(weekStart);
+        const end = addDays(start, 6); // Monday to Sunday
+        return (
+          <span 
+            key={idx}
+            className="inline-flex items-center px-3 py-1.5 rounded-md bg-primary/10 text-primary text-sm font-medium"
+            data-testid={`week-${weekStart}`}
+          >
+            {format(start, 'MMM d')} - {format(end, 'MMM d')}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function MyRequestsList({ requests }: MyRequestsListProps) {
@@ -37,8 +55,7 @@ export default function MyRequestsList({ requests }: MyRequestsListProps) {
   return (
     <div className="space-y-4" data-testid="my-requests-list">
       {requests.map((request) => {
-        const showDates = request.firstChoiceStart && request.firstChoiceEnd && 
-                         request.secondChoiceStart && request.secondChoiceEnd;
+        const showWeeks = request.firstChoiceWeeks && request.secondChoiceWeeks;
         
         return (
           <Card key={request.id} data-testid={`request-item-${request.id}`}>
@@ -49,19 +66,19 @@ export default function MyRequestsList({ requests }: MyRequestsListProps) {
               <StatusBadge status={request.status} />
             </CardHeader>
             <CardContent className="space-y-4">
-              {showDates ? (
+              {showWeeks ? (
                 <>
                   <div>
-                    <p className="text-sm font-medium text-foreground mb-2">First Choice:</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(request.firstChoiceStart!), 'MMM d, yyyy')} - {format(new Date(request.firstChoiceEnd!), 'MMM d, yyyy')}
+                    <p className="text-sm font-medium text-foreground mb-2">
+                      First Choice ({request.firstChoiceWeeks!.length} {request.firstChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
                     </p>
+                    <WeeksList weeks={request.firstChoiceWeeks!} />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground mb-2">Second Choice:</p>
-                    <p className="text-sm text-muted-foreground">
-                      {format(new Date(request.secondChoiceStart!), 'MMM d, yyyy')} - {format(new Date(request.secondChoiceEnd!), 'MMM d, yyyy')}
+                    <p className="text-sm font-medium text-foreground mb-2">
+                      Second Choice ({request.secondChoiceWeeks!.length} {request.secondChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
                     </p>
+                    <WeeksList weeks={request.secondChoiceWeeks!} />
                   </div>
                   {(request.choice === 'first' || request.choice === 'second') && (
                     <p className="text-sm text-primary font-medium">
