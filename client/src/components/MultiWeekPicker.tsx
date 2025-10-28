@@ -63,13 +63,23 @@ export default function MultiWeekPicker({
   };
   
   const handleWeekToggle = (weekStart: Date) => {
+    console.log(`[${label}] Week clicked:`, format(weekStart, 'yyyy-MM-dd'));
+    console.log(`[${label}] Currently selected weeks:`, selectedWeeks.map(w => format(w, 'yyyy-MM-dd')));
+    console.log(`[${label}] Is week already selected?`, isWeekSelected(weekStart));
+    
     if (isWeekSelected(weekStart)) {
       // Remove the week
-      onWeeksChange(selectedWeeks.filter(w => !isSameDay(w, weekStart)));
+      const newWeeks = selectedWeeks.filter(w => !isSameDay(w, weekStart));
+      console.log(`[${label}] Removing week, new selection:`, newWeeks.map(w => format(w, 'yyyy-MM-dd')));
+      onWeeksChange(newWeeks);
     } else {
       // Add the week if under the limit
       if (selectedWeeks.length < maxWeeks) {
-        onWeeksChange([...selectedWeeks, weekStart]);
+        const newWeeks = [...selectedWeeks, weekStart];
+        console.log(`[${label}] Adding week, new selection:`, newWeeks.map(w => format(w, 'yyyy-MM-dd')));
+        onWeeksChange(newWeeks);
+      } else {
+        console.log(`[${label}] Cannot add week - limit reached (${selectedWeeks.length}/${maxWeeks})`);
       }
     }
   };
