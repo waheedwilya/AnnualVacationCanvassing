@@ -12,6 +12,11 @@ interface VacationRequestFormProps {
 export default function VacationRequestForm({ availableWeeks, onSubmit }: VacationRequestFormProps) {
   const [firstChoiceWeeks, setFirstChoiceWeeks] = useState<Date[]>([]);
   const [secondChoiceWeeks, setSecondChoiceWeeks] = useState<Date[]>([]);
+  
+  // Debug logging
+  console.log('=== VacationRequestForm State ===');
+  console.log('First Choice Weeks:', firstChoiceWeeks.map(w => format(w, 'yyyy-MM-dd')));
+  console.log('Second Choice Weeks:', secondChoiceWeeks.map(w => format(w, 'yyyy-MM-dd')));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
