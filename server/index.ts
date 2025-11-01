@@ -102,6 +102,12 @@ app.use((req, res, next) => {
       
       // Seed database AFTER server starts to prevent startup crashes
       try {
+        // First ensure tables exist (especially important for Azure PostgreSQL)
+        if (process.env.DATABASE_URL) {
+          const { ensureTablesExist } = await import('./setup-tables.js');
+          await ensureTablesExist(process.env.DATABASE_URL);
+        }
+        
         await seedDatabase();
       } catch (error) {
         log("Warning: Database seeding failed, but server is still running");
