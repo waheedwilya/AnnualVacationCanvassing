@@ -48,9 +48,6 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Seed database with initial data
-  await seedDatabase();
-  
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -79,7 +76,15 @@ app.use((req, res, next) => {
     port,
     host: "0.0.0.0",
     reusePort: true,
-  }, () => {
+  }, async () => {
     log(`serving on port ${port}`);
+    
+    // Seed database AFTER server starts to prevent startup crashes
+    try {
+      await seedDatabase();
+    } catch (error) {
+      log("Warning: Database seeding failed, but server is still running");
+      console.error(error);
+    }
   });
 })();
