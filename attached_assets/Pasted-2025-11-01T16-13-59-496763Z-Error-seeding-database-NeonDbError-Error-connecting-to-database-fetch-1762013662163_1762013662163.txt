@@ -1,0 +1,83 @@
+2025-11-01T16:13:59.496763Z Error seeding database: NeonDbError: Error connecting to database: fetch failed
+2025-11-01T16:13:59.4967924Z     at execute (file:///node_modules/@neondatabase/serverless/index.mjs:1549:24)
+2025-11-01T16:13:59.4967947Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-01T16:13:59.4967963Z     at async NeonHttpPreparedQuery.execute (file:///node_modules/drizzle-orm/neon-http/session.js:40:20)
+2025-11-01T16:13:59.4967978Z     at async PgStorage.getAllWorkers (file:///home/site/wwwroot/dist/index.js:134:12)
+2025-11-01T16:13:59.4967992Z     at async seedDatabase (file:///home/site/wwwroot/dist/index.js:434:29)
+2025-11-01T16:13:59.4968006Z     at async Server.<anonymous> (file:///home/site/wwwroot/dist/index.js:567:9) {
+2025-11-01T16:13:59.4968019Z   severity: undefined,
+2025-11-01T16:13:59.4968032Z   code: undefined,
+2025-11-01T16:13:59.4968044Z   detail: undefined,
+2025-11-01T16:13:59.4968057Z   hint: undefined,
+2025-11-01T16:13:59.4968093Z   position: undefined,
+2025-11-01T16:13:59.4968107Z   internalPosition: undefined,
+2025-11-01T16:13:59.496812Z   internalQuery: undefined,
+2025-11-01T16:13:59.4968133Z   where: undefined,
+2025-11-01T16:13:59.4968145Z   schema: undefined,
+2025-11-01T16:13:59.4968158Z   table: undefined,
+2025-11-01T16:13:59.496817Z   column: undefined,
+2025-11-01T16:13:59.4968183Z   dataType: undefined,
+2025-11-01T16:13:59.4968196Z   constraint: undefined,
+2025-11-01T16:13:59.4968208Z   file: undefined,
+2025-11-01T16:13:59.4968221Z   line: undefined,
+2025-11-01T16:13:59.4968247Z   routine: undefined,
+2025-11-01T16:13:59.4968262Z   sourceError: TypeError: fetch failed
+2025-11-01T16:13:59.4968276Z       at node:internal/deps/undici/undici:12637:11
+2025-11-01T16:13:59.4968291Z       at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-01T16:13:59.4968306Z       at async execute (file:///node_modules/@neondatabase/serverless/index.mjs:1548:15)
+2025-11-01T16:13:59.4968322Z       at async NeonHttpPreparedQuery.execute (file:///node_modules/drizzle-orm/neon-http/session.js:40:20)
+2025-11-01T16:13:59.4968337Z       at async PgStorage.getAllWorkers (file:///home/site/wwwroot/dist/index.js:134:12)
+2025-11-01T16:13:59.4968352Z       at async seedDatabase (file:///home/site/wwwroot/dist/index.js:434:29)
+2025-11-01T16:13:59.4968366Z       at async Server.<anonymous> (file:///home/site/wwwroot/dist/index.js:567:9) {
+2025-11-01T16:13:59.4968381Z     cause: ConnectTimeoutError: Connect Timeout Error
+2025-11-01T16:13:59.4968395Z         at onConnectTimeout (node:internal/deps/undici/undici:7771:28)
+2025-11-01T16:13:59.4968451Z         at node:internal/deps/undici/undici:7727:50
+2025-11-01T16:13:59.4968466Z         at Immediate._onImmediate (node:internal/deps/undici/undici:7759:13)
+2025-11-01T16:13:59.4968481Z         at process.processImmediate (node:internal/timers:476:21)
+2025-11-01T16:13:59.4968495Z         at process.callbackTrampoline (node:internal/async_hooks:128:17) {
+2025-11-01T16:13:59.4968509Z       code: 'UND_ERR_CONNECT_TIMEOUT'
+2025-11-01T16:13:59.4968521Z     }
+2025-11-01T16:13:59.4968534Z   }
+2025-11-01T16:13:59.4968546Z }
+2025-11-01T16:13:59.5155494Z 4:13:59 PM [express] Warning: Database seeding failed, but server is still running
+2025-11-01T16:13:59.5156314Z NeonDbError: Error connecting to database: fetch failed
+2025-11-01T16:13:59.5156346Z     at execute (file:///node_modules/@neondatabase/serverless/index.mjs:1549:24)
+2025-11-01T16:13:59.5156361Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-01T16:13:59.5156377Z     at async NeonHttpPreparedQuery.execute (file:///node_modules/drizzle-orm/neon-http/session.js:40:20)
+2025-11-01T16:13:59.5156392Z     at async PgStorage.getAllWorkers (file:///home/site/wwwroot/dist/index.js:134:12)
+2025-11-01T16:13:59.5156406Z     at async seedDatabase (file:///home/site/wwwroot/dist/index.js:434:29)
+2025-11-01T16:13:59.515642Z     at async Server.<anonymous> (file:///home/site/wwwroot/dist/index.js:567:9) {
+2025-11-01T16:13:59.5156433Z   severity: undefined,
+2025-11-01T16:13:59.5156446Z   code: undefined,
+2025-11-01T16:13:59.5156458Z   detail: undefined,
+2025-11-01T16:13:59.515647Z   hint: undefined,
+2025-11-01T16:13:59.5156499Z   position: undefined,
+2025-11-01T16:13:59.5156584Z   internalPosition: undefined,
+2025-11-01T16:13:59.5156597Z   internalQuery: undefined,
+2025-11-01T16:13:59.5156643Z   where: undefined,
+2025-11-01T16:13:59.5156656Z   schema: undefined,
+2025-11-01T16:13:59.5156668Z   table: undefined,
+2025-11-01T16:13:59.515668Z   column: undefined,
+2025-11-01T16:13:59.5156692Z   dataType: undefined,
+2025-11-01T16:13:59.5156705Z   constraint: undefined,
+2025-11-01T16:13:59.5156717Z   file: undefined,
+2025-11-01T16:13:59.5156728Z   line: undefined,
+2025-11-01T16:13:59.5156742Z   routine: undefined,
+2025-11-01T16:13:59.5156774Z   sourceError: TypeError: fetch failed
+2025-11-01T16:13:59.5156799Z       at node:internal/deps/undici/undici:12637:11
+2025-11-01T16:13:59.5156815Z       at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-01T16:13:59.5156829Z       at async execute (file:///node_modules/@neondatabase/serverless/index.mjs:1548:15)
+2025-11-01T16:13:59.5156844Z       at async NeonHttpPreparedQuery.execute (file:///node_modules/drizzle-orm/neon-http/session.js:40:20)
+2025-11-01T16:13:59.5156859Z       at async PgStorage.getAllWorkers (file:///home/site/wwwroot/dist/index.js:134:12)
+2025-11-01T16:13:59.5156873Z       at async seedDatabase (file:///home/site/wwwroot/dist/index.js:434:29)
+2025-11-01T16:13:59.5156887Z       at async Server.<anonymous> (file:///home/site/wwwroot/dist/index.js:567:9) {
+2025-11-01T16:13:59.5156901Z     cause: ConnectTimeoutError: Connect Timeout Error
+2025-11-01T16:13:59.515693Z         at onConnectTimeout (node:internal/deps/undici/undici:7771:28)
+2025-11-01T16:13:59.5156944Z         at node:internal/deps/undici/undici:7727:50
+2025-11-01T16:13:59.5156958Z         at Immediate._onImmediate (node:internal/deps/undici/undici:7759:13)
+2025-11-01T16:13:59.5156972Z         at process.processImmediate (node:internal/timers:476:21)
+2025-11-01T16:13:59.5156986Z         at process.callbackTrampoline (node:internal/async_hooks:128:17) {
+2025-11-01T16:13:59.5156999Z       code: 'UND_ERR_CONNECT_TIMEOUT'
+2025-11-01T16:13:59.5157011Z     }
+2025-11-01T16:13:59.5157023Z   }
+2025-11-01T16:13:59.5157035Z }
