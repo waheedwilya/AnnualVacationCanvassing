@@ -24,6 +24,12 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Install production dependencies
+        run: |
+          mkdir temp-prod
+          cp package*.json temp-prod/
+          cd temp-prod && npm ci --omit=dev
+          
       - name: Prepare deployment package
         run: |
           mkdir deploy-package
@@ -31,6 +37,7 @@ jobs:
           cp package*.json deploy-package/
           cp -r shared deploy-package/
           cp drizzle.config.ts deploy-package/ 2>/dev/null || true
+          cp -r temp-prod/node_modules deploy-package/
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
