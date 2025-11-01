@@ -11,6 +11,27 @@ The system is designed for efficiency and accessibility, particularly for use on
 
 ## Recent Changes
 
+### November 1, 2025 - PostgreSQL Integration
+**Successfully integrated PostgreSQL for data persistence:**
+- **Database**: Azure Database for PostgreSQL with Drizzle ORM
+- **Driver**: Neon HTTP driver (`drizzle-orm/neon-http` with `@neondatabase/serverless`)
+- **Storage Layer**: Created `PgStorage` class implementing `IStorage` interface
+- **Automatic Switching**: Application uses PostgreSQL when `DATABASE_URL` is present, otherwise falls back to in-memory storage
+- **Schema Management**: Database schema pushed using `npm run db:push`
+- **Seeded Data**: 4 workers and 3 vacation requests with proper array data
+
+**Implementation Details:**
+- All CRUD operations migrated to use Drizzle typed queries with `eq()` helper
+- Multi-week array data (`firstChoiceWeeks`, `secondChoiceWeeks`) stored as PostgreSQL text arrays
+- Database defaults handle `status`, `year`, and `submittedAt` fields automatically
+- Connection established using Neon HTTP client for optimal serverless performance
+- End-to-end testing confirmed data persists correctly across requests
+
+**Key Files:**
+- `server/storage.ts` - PgStorage implementation with conditional export
+- `shared/schema.ts` - Drizzle schema with workers and vacation_requests tables
+- `server/seed.ts` - Database seeding after server startup
+
 ### November 1, 2025 - Azure Deployment
 **Successfully deployed to Azure App Service:**
 - **Production URL**: https://annualvacationcanvasing-webapp-ayg0bneve3gea3cq.eastus-01.azurewebsites.net/
@@ -135,23 +156,25 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage Solutions
 
-**Database**: PostgreSQL accessed via Neon serverless driver
+**Database**: Azure Database for PostgreSQL accessed via Neon HTTP driver
 
 **ORM**: Drizzle ORM for type-safe database queries
 - Schema defined in `shared/schema.ts`
-- Migrations managed in `./migrations` directory
-- Drizzle Kit for schema management and migrations
+- Schema pushed using `npm run db:push` command
+- Drizzle Kit for schema management
 
 **Current Schema**:
-- Users table with UUID primary keys, username, and password fields
+- `workers` table with UUID primary keys, name, joining_date, department, weeks_entitled
+- `vacation_requests` table with UUID primary keys, worker_id (foreign key), year, status, first_choice_weeks and second_choice_weeks (text arrays), allocated_choice, submitted_at
 - Zod schemas for validation using drizzle-zod integration
 
-**Storage Abstraction**: 
+**Storage Implementation**: 
 - Interface-based design (`IStorage`) for flexibility
-- In-memory implementation (`MemStorage`) for development
-- Designed to be swapped for PostgreSQL implementation in production
+- `PgStorage` class using PostgreSQL with Drizzle ORM (production)
+- `MemStorage` class for in-memory storage (development fallback)
+- Conditional export based on `DATABASE_URL` environment variable
 
-**Design Decision**: The storage layer uses an interface pattern to allow easy switching between in-memory storage (development/testing) and PostgreSQL (production) without changing business logic.
+**Design Decision**: The storage layer uses an interface pattern allowing automatic switching between PostgreSQL (when DATABASE_URL is present) and in-memory storage (when DATABASE_URL is absent) without changing business logic. The `PgStorage` class uses Drizzle ORM with the Neon HTTP driver for optimal serverless performance on Azure.
 
 **Seniority Calculation**: Vacation entitlement is calculated dynamically using `calculateVacationWeeks()` from `shared/utils.ts` based on the worker's joining date. This ensures consistent calculation between frontend display and backend validation. The legacy `weeksEntitled` field in the database is currently ignored but could be deprecated in a future update.
 
