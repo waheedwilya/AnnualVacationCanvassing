@@ -24,11 +24,19 @@ jobs:
       - name: Build application
         run: npm run build
 
+      - name: Prepare deployment package
+        run: |
+          mkdir deploy-package
+          cp -r dist deploy-package/
+          cp package*.json deploy-package/
+          cp -r shared deploy-package/
+          cp -r migrations deploy-package/
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: .
+          path: deploy-package/
 
   deploy:
     runs-on: ubuntu-latest
