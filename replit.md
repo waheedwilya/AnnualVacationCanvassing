@@ -9,7 +9,44 @@ This is a factory worker vacation request and approval system with seniority-bas
 
 The system is designed for efficiency and accessibility, particularly for use on the factory floor with large touch targets and clear status indicators.
 
-## Recent Changes (October 27, 2025)
+## Recent Changes
+
+### November 1, 2025 - Azure Deployment
+**Successfully deployed to Azure App Service:**
+- **Production URL**: https://annualvacationcanvasing-webapp-ayg0bneve3gea3cq.eastus-01.azurewebsites.net/
+- **Health Check**: `/health` endpoint for monitoring
+- **GitHub Actions**: Automated CI/CD pipeline on push to main branch
+
+**Deployment Architecture:**
+- Azure App Service (Node.js 18.20.8 runtime)
+- GitHub Actions for build and deployment
+- Production build uses esbuild for server bundling and Vite for client build
+- Separate production and development node_modules (production excludes devDependencies)
+
+**Key Deployment Fixes:**
+1. **Vite Bundling Issue**: Prevented esbuild from bundling dev-only Vite package using opaque dynamic import pattern (`new Function('p', 'return import(p)')(path)`)
+2. **Node 18 Compatibility**: Replaced `import.meta.dirname` with Node 18-compatible `fileURLToPath(import.meta.url)` approach
+3. **Enhanced Logging**: Added detailed startup logging for easier Azure debugging
+4. **Database Seeding**: Moved seeding to run after server starts to prevent startup crashes
+
+**Deployment Package Structure:**
+```
+deploy-package/
+├── dist/
+│   ├── index.js (bundled server)
+│   └── public/ (client assets)
+├── node_modules/ (production only)
+├── shared/ (shared types)
+├── package.json
+└── package-lock.json
+```
+
+**Important Notes:**
+- `server/utils.ts` contains production-safe utilities (log, serveStatic) without Vite dependencies
+- Dynamic import of `./vite.js` only occurs in development mode
+- Production serves pre-built static files from `dist/public/`
+
+### October 27, 2025 - Multi-Week Selection
 
 **Multi-Week Selection Feature:**
 - Migrated from date range format to array-based format for vacation requests
