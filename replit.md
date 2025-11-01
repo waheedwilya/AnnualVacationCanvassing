@@ -14,7 +14,7 @@ The system is designed for efficiency and accessibility, particularly for use on
 ### November 1, 2025 - PostgreSQL Integration
 **Successfully integrated PostgreSQL for data persistence:**
 - **Database**: Azure Database for PostgreSQL with Drizzle ORM
-- **Driver**: Neon HTTP driver (`drizzle-orm/neon-http` with `@neondatabase/serverless`)
+- **Driver**: Standard PostgreSQL driver (`drizzle-orm/node-postgres` with `pg`)
 - **Storage Layer**: Created `PgStorage` class implementing `IStorage` interface
 - **Automatic Switching**: Application uses PostgreSQL when `DATABASE_URL` is present, otherwise falls back to in-memory storage
 - **Schema Management**: Database schema pushed using `npm run db:push`
@@ -24,8 +24,13 @@ The system is designed for efficiency and accessibility, particularly for use on
 - All CRUD operations migrated to use Drizzle typed queries with `eq()` helper
 - Multi-week array data (`firstChoiceWeeks`, `secondChoiceWeeks`) stored as PostgreSQL text arrays
 - Database defaults handle `status`, `year`, and `submittedAt` fields automatically
-- Connection established using Neon HTTP client for optimal serverless performance
+- Connection established using node-postgres Pool with SSL support for Azure compatibility
 - End-to-end testing confirmed data persists correctly across requests
+
+**Azure PostgreSQL Requirements:**
+- SSL must be enabled: `ssl: { rejectUnauthorized: false }` in connection pool
+- Connection string format: `postgresql://user:password@server:5432/db?sslmode=require`
+- Firewall must allow Azure services (Network > "Allow access to Azure services")
 
 **Key Files:**
 - `server/storage.ts` - PgStorage implementation with conditional export
@@ -156,7 +161,7 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage Solutions
 
-**Database**: Azure Database for PostgreSQL accessed via Neon HTTP driver
+**Database**: Azure Database for PostgreSQL accessed via node-postgres driver
 
 **ORM**: Drizzle ORM for type-safe database queries
 - Schema defined in `shared/schema.ts`
@@ -174,7 +179,7 @@ Preferred communication style: Simple, everyday language.
 - `MemStorage` class for in-memory storage (development fallback)
 - Conditional export based on `DATABASE_URL` environment variable
 
-**Design Decision**: The storage layer uses an interface pattern allowing automatic switching between PostgreSQL (when DATABASE_URL is present) and in-memory storage (when DATABASE_URL is absent) without changing business logic. The `PgStorage` class uses Drizzle ORM with the Neon HTTP driver for optimal serverless performance on Azure.
+**Design Decision**: The storage layer uses an interface pattern allowing automatic switching between PostgreSQL (when DATABASE_URL is present) and in-memory storage (when DATABASE_URL is absent) without changing business logic. The `PgStorage` class uses Drizzle ORM with the standard node-postgres driver for reliable Azure PostgreSQL connectivity.
 
 **Seniority Calculation**: Vacation entitlement is calculated dynamically using `calculateVacationWeeks()` from `shared/utils.ts` based on the worker's joining date. This ensures consistent calculation between frontend display and backend validation. The legacy `weeksEntitled` field in the database is currently ignored but could be deprecated in a future update.
 
