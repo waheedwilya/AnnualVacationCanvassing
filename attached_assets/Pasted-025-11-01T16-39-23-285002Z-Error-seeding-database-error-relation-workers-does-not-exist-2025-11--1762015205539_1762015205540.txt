@@ -1,0 +1,51 @@
+025-11-01T16:39:23.285002Z Error seeding database: error: relation "workers" does not exist
+2025-11-01T16:39:23.2850228Z     at /node_modules/pg-pool/index.js:45:11
+2025-11-01T16:39:23.2850248Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-01T16:39:23.2850263Z     at async file:///node_modules/drizzle-orm/node-postgres/session.js:83:22
+2025-11-01T16:39:23.2850278Z     at async PgStorage.getAllWorkers (file:///home/site/wwwroot/dist/index.js:139:12)
+2025-11-01T16:39:23.2850291Z     at async seedDatabase (file:///home/site/wwwroot/dist/index.js:439:29)
+2025-11-01T16:39:23.2850306Z     at async Server.<anonymous> (file:///home/site/wwwroot/dist/index.js:572:9) {
+2025-11-01T16:39:23.2850318Z   length: 106,
+2025-11-01T16:39:23.2850329Z   severity: 'ERROR',
+2025-11-01T16:39:23.2850341Z   code: '42P01',
+2025-11-01T16:39:23.2850353Z   detail: undefined,
+2025-11-01T16:39:23.285038Z   hint: undefined,
+2025-11-01T16:39:23.2850393Z   position: '74',
+2025-11-01T16:39:23.2850451Z   internalPosition: undefined,
+2025-11-01T16:39:23.2850463Z   internalQuery: undefined,
+2025-11-01T16:39:23.2850475Z   where: undefined,
+2025-11-01T16:39:23.2850487Z   schema: undefined,
+2025-11-01T16:39:23.2850499Z   table: undefined,
+2025-11-01T16:39:23.285051Z   column: undefined,
+2025-11-01T16:39:23.2850522Z   dataType: undefined,
+2025-11-01T16:39:23.2850535Z   constraint: undefined,
+2025-11-01T16:39:23.2850546Z   file: 'parse_relation.c',
+2025-11-01T16:39:23.2850559Z   line: '1392',
+2025-11-01T16:39:23.2850582Z   routine: 'parserOpenTable'
+2025-11-01T16:39:23.2850594Z }
+2025-11-01T16:39:23.3046912Z 4:39:23 PM [express] Warning: Database seeding failed, but server is still running
+2025-11-01T16:39:23.3049167Z error: relation "workers" does not exist
+2025-11-01T16:39:23.304922Z     at /node_modules/pg-pool/index.js:45:11
+2025-11-01T16:39:23.3049238Z     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-11-01T16:39:23.3049254Z     at async file:///node_modules/drizzle-orm/node-postgres/session.js:83:22
+2025-11-01T16:39:23.304927Z     at async PgStorage.getAllWorkers (file:///home/site/wwwroot/dist/index.js:139:12)
+2025-11-01T16:39:23.3049284Z     at async seedDatabase (file:///home/site/wwwroot/dist/index.js:439:29)
+2025-11-01T16:39:23.3049299Z     at async Server.<anonymous> (file:///home/site/wwwroot/dist/index.js:572:9) {
+2025-11-01T16:39:23.3049312Z   length: 106,
+2025-11-01T16:39:23.3049357Z   severity: 'ERROR',
+2025-11-01T16:39:23.304937Z   code: '42P01',
+2025-11-01T16:39:23.3049382Z   detail: undefined,
+2025-11-01T16:39:23.3049394Z   hint: undefined,
+2025-11-01T16:39:23.3049407Z   position: '74',
+2025-11-01T16:39:23.304942Z   internalPosition: undefined,
+2025-11-01T16:39:23.3049432Z   internalQuery: undefined,
+2025-11-01T16:39:23.3049445Z   where: undefined,
+2025-11-01T16:39:23.3049457Z   schema: undefined,
+2025-11-01T16:39:23.3049469Z   table: undefined,
+2025-11-01T16:39:23.3049481Z   column: undefined,
+2025-11-01T16:39:23.3049509Z   dataType: undefined,
+2025-11-01T16:39:23.3049521Z   constraint: undefined,
+2025-11-01T16:39:23.3049533Z   file: 'parse_relation.c',
+2025-11-01T16:39:23.3049545Z   line: '1392',
+2025-11-01T16:39:23.3049558Z   routine: 'parserOpenTable'
+2025-11-01T16:39:23.304957Z }
