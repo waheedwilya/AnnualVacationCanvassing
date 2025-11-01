@@ -30,7 +30,7 @@ jobs:
           cp -r dist deploy-package/
           cp package*.json deploy-package/
           cp -r shared deploy-package/
-          cp -r migrations deploy-package/
+          cp drizzle.config.ts deploy-package/ 2>/dev/null || true
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
