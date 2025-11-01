@@ -11,14 +11,14 @@ The system is designed for efficiency and accessibility, particularly for use on
 
 ## Recent Changes
 
-### November 1, 2025 - PostgreSQL Integration
+### November 1, 2025 - PostgreSQL Integration & Azure Database Setup
 **Successfully integrated PostgreSQL for data persistence:**
-- **Database**: Azure Database for PostgreSQL with Drizzle ORM
+- **Database**: Azure Database for PostgreSQL (Flexible Server)
+- **Database Name**: `postgres`
 - **Driver**: Standard PostgreSQL driver (`drizzle-orm/node-postgres` with `pg`)
 - **Storage Layer**: Created `PgStorage` class implementing `IStorage` interface
 - **Automatic Switching**: Application uses PostgreSQL when `DATABASE_URL` is present, otherwise falls back to in-memory storage
-- **Schema Management**: Database schema pushed using `npm run db:push`
-- **Seeded Data**: 4 workers and 3 vacation requests with proper array data
+- **Seeded Data**: 4 workers automatically seeded on server startup
 
 **Implementation Details:**
 - All CRUD operations migrated to use Drizzle typed queries with `eq()` helper
@@ -27,15 +27,27 @@ The system is designed for efficiency and accessibility, particularly for use on
 - Connection established using node-postgres Pool with SSL support for Azure compatibility
 - End-to-end testing confirmed data persists correctly across requests
 
-**Azure PostgreSQL Requirements:**
+**Azure PostgreSQL Setup:**
 - SSL must be enabled: `ssl: { rejectUnauthorized: false }` in connection pool
-- Connection string format: `postgresql://user:password@server:5432/db?sslmode=require`
-- Firewall must allow Azure services (Network > "Allow access to Azure services")
+- Connection string format: `postgresql://syedwdn:password@annualvacationcanvassing-db.postgres.database.azure.com:5432/postgres?sslmode=require`
+- Tables created manually using DBeaver due to Azure firewall restrictions
+- Database connection successful from Azure App Service
+
+**Table Creation Process:**
+- Created `create-azure-tables.sql` with table definitions and indexes
+- Created `setup-azure-db.js` Node script for automated setup (blocked by firewall)
+- Successfully created tables using DBeaver PostgreSQL client:
+  - Connected with SSL enabled (mode: require)
+  - Executed table creation SQL for `workers` and `vacation_requests` tables
+  - Created indexes for performance optimization
+- Azure App Service restarted after table creation to seed initial data
 
 **Key Files:**
 - `server/storage.ts` - PgStorage implementation with conditional export
 - `shared/schema.ts` - Drizzle schema with workers and vacation_requests tables
 - `server/seed.ts` - Database seeding after server startup
+- `create-azure-tables.sql` - SQL script for table creation
+- `setup-azure-db.js` - Node.js script for automated table creation (alternative method)
 
 ### November 1, 2025 - Azure Deployment
 **Successfully deployed to Azure App Service:**
