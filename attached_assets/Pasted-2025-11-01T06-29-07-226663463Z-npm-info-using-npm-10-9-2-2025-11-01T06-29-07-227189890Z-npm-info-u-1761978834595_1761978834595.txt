@@ -1,0 +1,30 @@
+2025-11-01T06:29:07.226663463Z  npm info using npm@10.9.2
+2025-11-01T06:29:07.227189890Z  npm info using node@v18.20.8
+2025-11-01T06:29:08.728273852Z
+2025-11-01T06:29:08.729462566Z  > rest-express@1.0.0 start
+2025-11-01T06:29:08.729495666Z  > NODE_ENV=production node dist/index.js
+2025-11-01T06:29:08.729499766Z
+2025-11-01T06:29:10.943130366Z  node:internal/errors:496
+2025-11-01T06:29:10.943155966Z      ErrorCaptureStackTrace(err);
+2025-11-01T06:29:10.943159566Z      ^
+2025-11-01T06:29:10.943162766Z
+2025-11-01T06:29:10.943165266Z  Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'vite' imported from /home/site/wwwroot/dist/index.js
+2025-11-01T06:29:10.943168666Z      at new NodeError (node:internal/errors:405:5)
+2025-11-01T06:29:10.943171366Z      at packageResolve (node:internal/modules/esm/resolve:916:9)
+2025-11-01T06:29:10.943174166Z      at moduleResolve (node:internal/modules/esm/resolve:973:20)
+2025-11-01T06:29:10.943176866Z      at defaultResolve (node:internal/modules/esm/resolve:1206:11)
+2025-11-01T06:29:10.943179466Z      at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:404:12)
+2025-11-01T06:29:10.943181966Z      at ModuleLoader.resolve (node:internal/modules/esm/loader:373:25)
+2025-11-01T06:29:10.943191967Z      at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:250:38)
+2025-11-01T06:29:10.943195167Z      at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:76:39)
+2025-11-01T06:29:10.943209667Z      at link (node:internal/modules/esm/module_job:75:36) {
+2025-11-01T06:29:10.943212567Z    code: 'ERR_MODULE_NOT_FOUND'
+2025-11-01T06:29:10.943214467Z  }
+2025-11-01T06:29:10.953501983Z
+2025-11-01T06:29:10.953515084Z  Node.js v18.20.8
+2025-11-01T06:29:10.972235796Z  npm http fetch GET 200 https://registry.npmjs.org/npm 360ms
+2025-11-01T06:29:10.990596304Z  npm notice
+2025-11-01T06:29:10.990609604Z  npm notice New major version of npm available! 10.9.2 -> 11.6.2
+2025-11-01T06:29:10.990612904Z  npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.2
+2025-11-01T06:29:10.990640605Z  npm notice To update run: npm install -g npm@11.6.2
+2025-11-01T06:29:10.990644105Z  npm notice

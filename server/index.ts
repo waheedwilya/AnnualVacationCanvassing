@@ -1,6 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { serveStatic, log } from "./utils";
 import { seedDatabase } from "./seed";
 
 const app = express();
@@ -75,6 +75,10 @@ app.use((req, res, next) => {
     // doesn't interfere with the other routes
     if (app.get("env") === "development") {
       console.log("Setting up Vite dev server...");
+      // Use opaque import to prevent esbuild from bundling vite.ts
+      // This works in development (tsx from source) but prevents bundling the dev-only 'vite' package
+      const loadDevModule = (path: string) => new Function('p', 'return import(p)')(path);
+      const { setupVite } = await loadDevModule("./vite.js");
       await setupVite(app, server);
     } else {
       console.log("Serving static files from dist...");
