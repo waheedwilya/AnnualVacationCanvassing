@@ -7,8 +7,9 @@ import {
   vacationRequests
 } from "@shared/schema";
 import { randomUUID } from "crypto";
-import { drizzle } from "drizzle-orm/neon-http";
-import { neon } from "@neondatabase/serverless";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pkg from "pg";
+const { Pool } = pkg;
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
@@ -125,10 +126,14 @@ export class MemStorage implements IStorage {
 // PostgreSQL storage implementation using Drizzle ORM
 export class PgStorage implements IStorage {
   private db;
+  private pool;
 
   constructor(connectionString: string) {
-    const sql = neon(connectionString);
-    this.db = drizzle({ client: sql });
+    this.pool = new Pool({
+      connectionString,
+      ssl: { rejectUnauthorized: false }
+    });
+    this.db = drizzle(this.pool);
   }
 
   // Worker operations
