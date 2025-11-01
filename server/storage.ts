@@ -2,9 +2,14 @@ import {
   type Worker, 
   type InsertWorker,
   type VacationRequest,
-  type InsertVacationRequest 
+  type InsertVacationRequest,
+  workers,
+  vacationRequests
 } from "@shared/schema";
 import { randomUUID } from "crypto";
+import { drizzle } from "drizzle-orm/neon-http";
+import { neon } from "@neondatabase/serverless";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   // Worker operations
@@ -117,4 +122,108 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// PostgreSQL storage implementation using Drizzle ORM
+export class PgStorage implements IStorage {
+  private db;
+
+  constructor(connectionString: string) {
+    const sql = neon(connectionString);
+    this.db = drizzle({ client: sql });
+  }
+
+  // Worker operations
+  async getWorker(id: string): Promise<Worker | undefined> {
+    const result = await this.db
+      .select()
+      .from(workers)
+      .where(eq(workers.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getAllWorkers(): Promise<Worker[]> {
+    return await this.db.select().from(workers);
+  }
+
+  async getWorkersByDepartment(department: string): Promise<Worker[]> {
+    return await this.db
+      .select()
+      .from(workers)
+      .where(eq(workers.department, department));
+  }
+
+  async createWorker(insertWorker: InsertWorker): Promise<Worker> {
+    const result = await this.db
+      .insert(workers)
+      .values(insertWorker)
+      .returning();
+    return result[0];
+  }
+
+  // Vacation request operations
+  async getVacationRequest(id: string): Promise<VacationRequest | undefined> {
+    const result = await this.db
+      .select()
+      .from(vacationRequests)
+      .where(eq(vacationRequests.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getAllVacationRequests(): Promise<VacationRequest[]> {
+    return await this.db.select().from(vacationRequests);
+  }
+
+  async getVacationRequestsByWorker(workerId: string): Promise<VacationRequest[]> {
+    return await this.db
+      .select()
+      .from(vacationRequests)
+      .where(eq(vacationRequests.workerId, workerId));
+  }
+
+  async getVacationRequestsByYear(year: number): Promise<VacationRequest[]> {
+    return await this.db
+      .select()
+      .from(vacationRequests)
+      .where(eq(vacationRequests.year, year));
+  }
+
+  async getPendingVacationRequests(): Promise<VacationRequest[]> {
+    return await this.db
+      .select()
+      .from(vacationRequests)
+      .where(eq(vacationRequests.status, 'pending'));
+  }
+
+  async createVacationRequest(insertRequest: InsertVacationRequest): Promise<VacationRequest> {
+    const result = await this.db
+      .insert(vacationRequests)
+      .values(insertRequest)
+      .returning();
+    return result[0];
+  }
+
+  async updateVacationRequestStatus(
+    id: string, 
+    status: string, 
+    allocatedChoice?: string | null
+  ): Promise<VacationRequest | undefined> {
+    const updates: any = { status };
+    if (allocatedChoice !== undefined) {
+      updates.allocatedChoice = allocatedChoice;
+    }
+    
+    const result = await this.db
+      .update(vacationRequests)
+      .set(updates)
+      .where(eq(vacationRequests.id, id))
+      .returning();
+    
+    return result[0];
+  }
+}
+
+// Use PostgreSQL if DATABASE_URL is available, otherwise use in-memory storage
+export const storage = process.env.DATABASE_URL 
+  ? new PgStorage(process.env.DATABASE_URL)
+  : new MemStorage();
