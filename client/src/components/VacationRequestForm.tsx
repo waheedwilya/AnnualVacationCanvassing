@@ -6,10 +6,11 @@ import MultiWeekPicker from "./MultiWeekPicker";
 
 interface VacationRequestFormProps {
   availableWeeks: number;
+  isSubmitting?: boolean;
   onSubmit?: (firstChoiceWeeks: Date[], secondChoiceWeeks: Date[]) => void;
 }
 
-export default function VacationRequestForm({ availableWeeks, onSubmit }: VacationRequestFormProps) {
+export default function VacationRequestForm({ availableWeeks, isSubmitting = false, onSubmit }: VacationRequestFormProps) {
   const [firstChoiceWeeks, setFirstChoiceWeeks] = useState<Date[]>([]);
   const [secondChoiceWeeks, setSecondChoiceWeeks] = useState<Date[]>([]);
   
@@ -79,10 +80,10 @@ export default function VacationRequestForm({ availableWeeks, onSubmit }: Vacati
           <Button 
             type="submit" 
             className="w-full h-12"
-            disabled={!isFormValid || availableWeeks === 0}
+            disabled={!isFormValid || availableWeeks === 0 || isSubmitting}
             data-testid="button-submit-request"
           >
-            Submit Vacation Request
+            {isSubmitting ? 'Submitting...' : 'Submit Vacation Request'}
           </Button>
         </CardContent>
       </Card>

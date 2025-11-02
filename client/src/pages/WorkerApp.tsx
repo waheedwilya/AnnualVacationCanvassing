@@ -7,6 +7,7 @@ import VacationRequestForm from "@/components/VacationRequestForm";
 import MyRequestsList from "@/components/MyRequestsList";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
 import type { Worker, VacationRequest } from "@shared/schema";
 import { differenceInYears, format } from "date-fns";
 import { calculateVacationWeeks, getVacationEntitlementDescription } from "@shared/utils";
@@ -15,6 +16,7 @@ type WorkerView = 'dashboard' | 'request' | 'my-requests' | 'profile';
 
 export default function WorkerApp() {
   const [currentView, setCurrentView] = useState<WorkerView>('dashboard');
+  const { toast } = useToast();
   
   // For demo purposes, we'll use the first worker from the API
   // In a real app, this would come from authentication
@@ -46,12 +48,29 @@ export default function WorkerApp() {
         status: 'pending',
         allocatedChoice: null
       });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to submit vacation request');
+      }
+      
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/vacation-requests?workerId=${workerId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/vacation-requests'] });
+      toast({
+        title: "Request Submitted",
+        description: "Your vacation request has been submitted successfully.",
+      });
       setCurrentView('my-requests');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Submission Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     },
   });
 
@@ -107,6 +126,7 @@ export default function WorkerApp() {
             <h1 className="text-2xl font-bold text-foreground mb-6">New Vacation Request</h1>
             <VacationRequestForm 
               availableWeeks={weeksEntitled}
+              isSubmitting={submitRequest.isPending}
               onSubmit={(firstWeeks, secondWeeks) => {
                 submitRequest.mutate({
                   firstChoiceWeeks: firstWeeks.map(w => format(w, 'yyyy-MM-dd')),
