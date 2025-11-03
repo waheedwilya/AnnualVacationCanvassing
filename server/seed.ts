@@ -9,31 +9,28 @@ export async function seedDatabase() {
       return;
     }
 
-    // Create some workers
+    // Create some workers with specified phone numbers and random seniority < 7 years
     const workers = await Promise.all([
       storage.createWorker({
-        name: "John Smith",
-        joiningDate: "2018-03-15",
-        department: "Assembly",
-        weeksEntitled: 6
-      }),
-      storage.createWorker({
-        name: "Sarah Johnson",
-        joiningDate: "2020-06-20",
+        name: "Maria Rodriguez",
+        phoneNumber: "5513759096",
+        joiningDate: "2020-04-12",  // ~5 years seniority
         department: "Assembly",
         weeksEntitled: 5
       }),
       storage.createWorker({
-        name: "Mike Chen",
-        joiningDate: "2015-01-10",
+        name: "James Thompson",
+        phoneNumber: "2272185752",
+        joiningDate: "2022-08-15",  // ~3 years seniority
         department: "Packaging",
-        weeksEntitled: 6
+        weeksEntitled: 4
       }),
       storage.createWorker({
-        name: "Emily Davis",
-        joiningDate: "2021-09-05",
+        name: "Linda Martinez",
+        phoneNumber: "2813527628",
+        joiningDate: "2019-11-03",  // ~6 years seniority
         department: "Assembly",
-        weeksEntitled: 4
+        weeksEntitled: 5
       }),
     ]);
 
@@ -42,31 +39,23 @@ export async function seedDatabase() {
       storage.createVacationRequest({
         workerId: workers[0].id,
         year: 2026,
-        firstChoiceWeeks: ["2026-07-06", "2026-07-13", "2026-07-20", "2026-07-27"],
-        secondChoiceWeeks: ["2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24"],
+        firstChoiceWeeks: ["2026-07-06", "2026-07-13", "2026-07-20"],
+        secondChoiceWeeks: ["2026-08-03", "2026-08-10"],
         status: "pending",
         allocatedChoice: null
       }),
       storage.createVacationRequest({
         workerId: workers[1].id,
         year: 2026,
-        firstChoiceWeeks: ["2026-07-13", "2026-07-20", "2026-07-27"],
-        secondChoiceWeeks: ["2026-06-01", "2026-06-08", "2026-06-15", "2026-06-22"],
+        firstChoiceWeeks: ["2026-07-13", "2026-07-20"],
+        secondChoiceWeeks: ["2026-06-01", "2026-06-08", "2026-06-15"],
         status: "pending",
         allocatedChoice: null
-      }),
-      storage.createVacationRequest({
-        workerId: workers[2].id,
-        year: 2026,
-        firstChoiceWeeks: ["2026-06-01", "2026-06-08", "2026-06-15", "2026-06-22"],
-        secondChoiceWeeks: ["2026-09-07", "2026-09-14", "2026-09-21", "2026-09-28"],
-        status: "approved",
-        allocatedChoice: "first"
       }),
     ]);
 
     console.log("Database seeded successfully!");
-    console.log(`Created ${workers.length} workers and 3 vacation requests`);
+    console.log(`Created ${workers.length} workers and 2 vacation requests`);
   } catch (error) {
     console.error("Error seeding database:", error);
     throw error;

@@ -15,6 +15,7 @@ import { eq } from "drizzle-orm";
 export interface IStorage {
   // Worker operations
   getWorker(id: string): Promise<Worker | undefined>;
+  getWorkerByPhone(phoneNumber: string): Promise<Worker | undefined>;
   getAllWorkers(): Promise<Worker[]>;
   getWorkersByDepartment(department: string): Promise<Worker[]>;
   createWorker(worker: InsertWorker): Promise<Worker>;
@@ -42,6 +43,12 @@ export class MemStorage implements IStorage {
   // Worker operations
   async getWorker(id: string): Promise<Worker | undefined> {
     return this.workers.get(id);
+  }
+
+  async getWorkerByPhone(phoneNumber: string): Promise<Worker | undefined> {
+    return Array.from(this.workers.values()).find(
+      (worker) => worker.phoneNumber === phoneNumber
+    );
   }
 
   async getAllWorkers(): Promise<Worker[]> {
@@ -162,6 +169,15 @@ export class PgStorage implements IStorage {
       .select()
       .from(workers)
       .where(eq(workers.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getWorkerByPhone(phoneNumber: string): Promise<Worker | undefined> {
+    const result = await this.db
+      .select()
+      .from(workers)
+      .where(eq(workers.phoneNumber, phoneNumber))
       .limit(1);
     return result[0];
   }

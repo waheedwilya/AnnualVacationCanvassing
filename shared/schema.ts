@@ -6,6 +6,7 @@ import { z } from "zod";
 export const workers = pgTable("workers", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  phoneNumber: text("phone_number").notNull().unique(),
   joiningDate: date("joining_date").notNull(),
   department: text("department").notNull(),
   weeksEntitled: integer("weeks_entitled").notNull().default(6),

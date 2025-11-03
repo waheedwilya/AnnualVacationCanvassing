@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Home, FileText, Calendar, User, Shield } from "lucide-react";
-import { Link } from "wouter";
+import { Home, FileText, Calendar, User, LogOut } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import WorkerDashboard from "@/components/WorkerDashboard";
 import VacationRequestForm from "@/components/VacationRequestForm";
 import MyRequestsList from "@/components/MyRequestsList";
@@ -16,16 +16,18 @@ type WorkerView = 'dashboard' | 'request' | 'my-requests' | 'profile';
 
 export default function WorkerApp() {
   const [currentView, setCurrentView] = useState<WorkerView>('dashboard');
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   
-  // For demo purposes, we'll use the first worker from the API
-  // In a real app, this would come from authentication
-  const { data: workers } = useQuery<Worker[]>({
-    queryKey: ['/api/workers'],
-  });
-  
-  const currentWorker = workers?.[0];
+  // Get logged-in worker from localStorage
+  const currentWorkerData = localStorage.getItem('currentWorker');
+  const currentWorker: Worker | null = currentWorkerData ? JSON.parse(currentWorkerData) : null;
   const workerId = currentWorker?.id;
+
+  const handleLogout = () => {
+    localStorage.removeItem('currentWorker');
+    setLocation('/login');
+  };
   
   // Fetch vacation requests for this worker
   const { data: vacationRequests = [] } = useQuery<VacationRequest[]>({
@@ -96,15 +98,16 @@ export default function WorkerApp() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Header with role switcher */}
+      {/* Header with logout button */}
       <header className="border-b bg-card px-6 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-foreground">Worker Portal</h1>
-        <Link href="/supervisor">
-          <Button variant="outline" size="sm" data-testid="link-supervisor">
-            <Shield className="w-4 h-4 mr-2" />
-            Switch to Supervisor
-          </Button>
-        </Link>
+        <div>
+          <h1 className="text-lg font-semibold text-foreground">Worker Portal</h1>
+          <p className="text-sm text-muted-foreground">{currentWorker.name}</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={handleLogout} data-testid="button-logout">
+          <LogOut className="w-4 h-4 mr-2" />
+          Logout
+        </Button>
       </header>
       
       {/* Main Content */}

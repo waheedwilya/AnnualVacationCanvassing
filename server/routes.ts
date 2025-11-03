@@ -46,6 +46,28 @@ interface ConflictInfo {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Authentication routes
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ error: "Phone number is required" });
+      }
+      
+      const worker = await storage.getWorkerByPhone(phoneNumber);
+      
+      if (!worker) {
+        return res.status(404).json({ error: "Worker not found with this phone number" });
+      }
+      
+      // Return worker data (in a real app, you'd create a session here)
+      res.json({ worker });
+    } catch (error) {
+      res.status(500).json({ error: "Login failed" });
+    }
+  });
+
   // Worker routes
   app.get("/api/workers", async (_req, res) => {
     const workers = await storage.getAllWorkers();
