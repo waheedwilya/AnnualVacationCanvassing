@@ -537,6 +537,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Revert individual week approval/denial
+  app.post("/api/vacation-requests/:id/revert-week", async (req, res) => {
+    try {
+      const { week } = req.body;
+      
+      if (!week) {
+        return res.status(400).json({ error: "Week is required" });
+      }
+      
+      const request = await storage.getVacationRequest(req.params.id);
+      if (!request) {
+        return res.status(404).json({ error: "Request not found" });
+      }
+      
+      // Remove the week from both approved and denied lists
+      const approvedWeeks = (request.approvedWeeks || []).filter((w: string) => w !== week);
+      const deniedWeeks = (request.deniedWeeks || []).filter((w: string) => w !== week);
+      
+      await storage.updateVacationRequestWeeks(
+        req.params.id,
+        approvedWeeks,
+        deniedWeeks
+      );
+      
+      // If no more approved weeks, revert status to pending
+      if (approvedWeeks.length === 0 && request.status === 'approved') {
+        await storage.updateVacationRequestStatus(req.params.id, 'pending', null);
+      }
+      
+      const updatedRequest = await storage.getVacationRequest(req.params.id);
+      res.json(updatedRequest);
+    } catch (error) {
+      console.error('Revert week error:', error);
+      res.status(500).json({ error: "Failed to revert week" });
+    }
+  });
+
+  // Reset all approvals (all requests back to pending with no approved/denied weeks)
+  app.post("/api/vacation-requests/reset-all", async (_req, res) => {
+    try {
+      const allRequests = await storage.getAllVacationRequests();
+      
+      let resetCount = 0;
+      for (const request of allRequests) {
+        // Clear all approved and denied weeks
+        await storage.updateVacationRequestWeeks(request.id, [], []);
+        
+        // Set status back to pending
+        if (request.status !== 'pending') {
+          await storage.updateVacationRequestStatus(request.id, 'pending', null);
+          resetCount++;
+        }
+      }
+      
+      res.json({
+        success: true,
+        resetCount,
+        message: `Reset ${resetCount} requests to pending`
+      });
+    } catch (error) {
+      console.error('Reset all error:', error);
+      res.status(500).json({ error: "Failed to reset approvals" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

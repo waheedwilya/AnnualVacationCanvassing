@@ -126,6 +126,30 @@ export default function SupervisorApp() {
     },
   });
 
+  // Revert individual week mutation
+  const revertWeek = useMutation({
+    mutationFn: async ({ requestId, week }: { requestId: string; week: string }) => {
+      const response = await apiRequest('POST', `/api/vacation-requests/${requestId}/revert-week`, { week });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/vacation-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vacation-requests/conflicts'] });
+    },
+  });
+
+  // Reset all approvals mutation
+  const resetAllApprovals = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/vacation-requests/reset-all', {});
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/vacation-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vacation-requests/conflicts'] });
+    },
+  });
+
   const handleApprove = (id: string) => {
     updateRequestStatus.mutate({ id, status: 'approved', allocatedChoice: 'first' });
   };
@@ -140,6 +164,16 @@ export default function SupervisorApp() {
 
   const handleAutoAllocate = () => {
     autoAllocate.mutate();
+  };
+
+  const handleRevertWeek = (requestId: string, week: string) => {
+    revertWeek.mutate({ requestId, week });
+  };
+
+  const handleResetAllApprovals = () => {
+    if (confirm('Are you sure you want to reset all approvals? This will revert all requests back to pending status.')) {
+      resetAllApprovals.mutate();
+    }
   };
 
   const handleSaveWeekChanges = async (requestId: string) => {
@@ -317,6 +351,7 @@ export default function SupervisorApp() {
             approvedRequests={approvedRequests}
             conflicts={conflicts}
             onAutoAllocate={handleAutoAllocate}
+            onResetAllApprovals={handleResetAllApprovals}
           />
         </div>
 
@@ -410,14 +445,42 @@ export default function SupervisorApp() {
                                             {format(weekDate, 'MMM d')}
                                           </span>
                                           {isApproved && (
-                                            <Badge className="bg-success text-success-foreground">
-                                              <Check className="w-3 h-3" />
-                                            </Badge>
+                                            <div className="flex items-center gap-1">
+                                              <Badge className="bg-success text-success-foreground">
+                                                <Check className="w-3 h-3" />
+                                              </Badge>
+                                              {!isChanged && (
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-5 w-5"
+                                                  onClick={() => handleRevertWeek(row.requestId, week)}
+                                                  data-testid={`button-revert-${week}`}
+                                                  title="Revert approval"
+                                                >
+                                                  <X className="w-3 h-3" />
+                                                </Button>
+                                              )}
+                                            </div>
                                           )}
                                           {isDenied && (
-                                            <Badge className="bg-destructive text-destructive-foreground">
-                                              <X className="w-3 h-3" />
-                                            </Badge>
+                                            <div className="flex items-center gap-1">
+                                              <Badge className="bg-destructive text-destructive-foreground">
+                                                <X className="w-3 h-3" />
+                                              </Badge>
+                                              {!isChanged && (
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-5 w-5"
+                                                  onClick={() => handleRevertWeek(row.requestId, week)}
+                                                  data-testid={`button-revert-${week}`}
+                                                  title="Revert denial"
+                                                >
+                                                  <X className="w-3 h-3" />
+                                                </Button>
+                                              )}
+                                            </div>
                                           )}
                                           {!isApproved && !isDenied && (
                                             <div className="flex gap-1">
@@ -523,6 +586,7 @@ export default function SupervisorApp() {
                                       const weekDate = parse(week, 'yyyy-MM-dd', new Date());
                                       const isApproved = row.approvedWeeks.includes(week) || changes?.approvedWeeks.has(week);
                                       const isDenied = row.deniedWeeks.includes(week) || changes?.deniedWeeks.has(week);
+                                      const isChanged = changes?.approvedWeeks.has(week) || changes?.deniedWeeks.has(week);
                                       
                                       return (
                                         <div key={week} className="flex items-center gap-1">
@@ -530,14 +594,42 @@ export default function SupervisorApp() {
                                             {format(weekDate, 'MMM d')}
                                           </span>
                                           {isApproved && (
-                                            <Badge className="bg-success text-success-foreground">
-                                              <Check className="w-3 h-3" />
-                                            </Badge>
+                                            <div className="flex items-center gap-1">
+                                              <Badge className="bg-success text-success-foreground">
+                                                <Check className="w-3 h-3" />
+                                              </Badge>
+                                              {!isChanged && (
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-5 w-5"
+                                                  onClick={() => handleRevertWeek(row.requestId, week)}
+                                                  data-testid={`button-revert-${week}`}
+                                                  title="Revert approval"
+                                                >
+                                                  <X className="w-3 h-3" />
+                                                </Button>
+                                              )}
+                                            </div>
                                           )}
                                           {isDenied && (
-                                            <Badge className="bg-destructive text-destructive-foreground">
-                                              <X className="w-3 h-3" />
-                                            </Badge>
+                                            <div className="flex items-center gap-1">
+                                              <Badge className="bg-destructive text-destructive-foreground">
+                                                <X className="w-3 h-3" />
+                                              </Badge>
+                                              {!isChanged && (
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-5 w-5"
+                                                  onClick={() => handleRevertWeek(row.requestId, week)}
+                                                  data-testid={`button-revert-${week}`}
+                                                  title="Revert denial"
+                                                >
+                                                  <X className="w-3 h-3" />
+                                                </Button>
+                                              )}
+                                            </div>
                                           )}
                                           {!isApproved && !isDenied && (
                                             <div className="flex gap-1">

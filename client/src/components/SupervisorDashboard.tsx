@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Clock, CheckCircle2, AlertTriangle, Sparkles } from "lucide-react";
+import { Users, Clock, CheckCircle2, AlertTriangle, Sparkles, RotateCcw } from "lucide-react";
 import { useState } from "react";
 
 interface SupervisorDashboardProps {
@@ -9,6 +9,7 @@ interface SupervisorDashboardProps {
   approvedRequests: number;
   conflicts: number;
   onAutoAllocate?: () => void;
+  onResetAllApprovals?: () => void;
 }
 
 export default function SupervisorDashboard({
@@ -16,7 +17,8 @@ export default function SupervisorDashboard({
   pendingRequests,
   approvedRequests,
   conflicts,
-  onAutoAllocate
+  onAutoAllocate,
+  onResetAllApprovals
 }: SupervisorDashboardProps) {
   const [isAllocating, setIsAllocating] = useState(false);
 
@@ -41,17 +43,30 @@ export default function SupervisorDashboard({
           </p>
         </div>
         
-        {conflicts > 0 && (
-          <Button
-            onClick={handleAutoAllocate}
-            disabled={isAllocating}
-            className="h-12 bg-auto-allocate hover:bg-auto-allocate text-auto-allocate-foreground border border-auto-allocate-border"
-            data-testid="button-auto-allocate"
-          >
-            <Sparkles className="h-4 w-4 mr-2" />
-            {isAllocating ? 'Allocating...' : 'Auto-Allocate'}
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {approvedRequests > 0 && (
+            <Button
+              onClick={onResetAllApprovals}
+              variant="outline"
+              className="h-12"
+              data-testid="button-reset-all"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Reset All Approvals
+            </Button>
+          )}
+          {conflicts > 0 && (
+            <Button
+              onClick={handleAutoAllocate}
+              disabled={isAllocating}
+              className="h-12 bg-auto-allocate hover:bg-auto-allocate text-auto-allocate-foreground border border-auto-allocate-border"
+              data-testid="button-auto-allocate"
+            >
+              <Sparkles className="h-4 w-4 mr-2" />
+              {isAllocating ? 'Allocating...' : 'Auto-Allocate'}
+            </Button>
+          )}
+        </div>
       </div>
 
       {conflicts > 0 && (
