@@ -64,6 +64,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return worker data (in a real app, you'd create a session here)
       res.json({ worker });
     } catch (error) {
+      console.error("Login error:", error);
       res.status(500).json({ error: "Login failed" });
     }
   });
