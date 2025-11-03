@@ -6,27 +6,36 @@ This project is a vacation request and approval system for factory workers, feat
 
 ## Recent Updates (November 2025)
 
+### Department-Level Vacation Limits
+- Implemented department-level allocation: only 1 worker per department can be approved for the same week
+- Workers from different departments can have overlapping vacation weeks
+- Auto-allocation algorithm tracks allocated weeks per department (not globally)
+- Conflict detection only shows conflicts within the same department
+- Supervisor UI displays department information for each worker
+- Seeded workers: Linda Martinez & Maria Rodriguez (Assembly), James Thompson (Packaging)
+
 ### Auto-Allocation Fairness Enhancement
 - Implemented two-phase fairness mechanism for vacation allocation
-- Phase 1: Process all first choice requests by seniority order
+- Phase 1: Process all first choice requests by seniority order (within each department)
 - Phase 2: Workers who didn't get full first choice get priority for second choice over those who did
 - This ensures fairness: if you lose your first choice to higher seniority, you get compensated with priority on second choice
 
 ### Conflict Highlighting for Workers
-- Workers can now see which weeks conflict with higher seniority workers
+- Workers can now see which weeks conflict with higher seniority workers in their department
 - Conflicting weeks are highlighted with yellow border in worker's request view
 - Warning banner displays when conflicts are detected
-- Only shows conflicts with higher seniority workers (earlier joining date)
+- Only shows conflicts with higher seniority workers in the same department (earlier joining date)
 
 ### Supervisor Approval Management
 - Added revert buttons next to approved/denied weeks for granular control
 - "Reset All Approvals" button to revert all requests back to pending status
 - Individual week approvals can be undone without affecting other weeks
 - Confirmation dialog prevents accidental full resets
+- Filter requests by department dropdown
 
 ### Phone Number Authentication
 - Workers login using phone numbers (no validation required)
-- Three seeded workers: Maria Rodriguez (5513759096), James Thompson (2272185752), Linda Martinez (2813527628)
+- Three seeded workers: Maria Rodriguez (5513759096, Assembly), James Thompson (2272185752, Packaging), Linda Martinez (2813527628, Assembly)
 - Phone number stored in localStorage for session persistence
 - Protected routing with automatic redirect to login for unauthenticated users
 
