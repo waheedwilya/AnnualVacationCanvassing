@@ -1,7 +1,8 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Check, X, AlertTriangle } from "lucide-react";
+import { Check, X, AlertTriangle, Save } from "lucide-react";
 import { format, addDays } from "date-fns";
+import { useState } from "react";
 import StatusBadge, { type RequestStatus } from "./StatusBadge";
 import WorkerInfoCard from "./WorkerInfoCard";
 
@@ -19,35 +20,74 @@ interface VacationRequest {
   firstChoiceWeeks?: string[];
   secondChoiceWeeks?: string[];
   allocatedChoice?: string | null;
+  approvedWeeks?: string[];
+  deniedWeeks?: string[];
 }
 
 interface RequestCardProps {
   request: VacationRequest;
   onApprove?: (id: string) => void;
   onDeny?: (id: string) => void;
+  onUpdateWeeks?: (id: string, approvedWeeks: string[], deniedWeeks: string[]) => void;
   showActions?: boolean;
 }
 
-function WeeksList({ weeks, isAllocated }: { weeks: string[]; isAllocated?: boolean }) {
+interface WeekWithActionsProps {
+  week: string;
+  choice: 'first' | 'second';
+  isApproved: boolean;
+  isDenied: boolean;
+  onToggleApprove: () => void;
+  onToggleDeny: () => void;
+  disabled?: boolean;
+}
+
+function WeekWithActions({ 
+  week, 
+  choice, 
+  isApproved, 
+  isDenied, 
+  onToggleApprove, 
+  onToggleDeny,
+  disabled = false
+}: WeekWithActionsProps) {
+  const start = new Date(week);
+  const end = addDays(start, 6);
+  
   return (
-    <div className="flex flex-wrap gap-2">
-      {weeks.map((weekStart, idx) => {
-        const start = new Date(weekStart);
-        const end = addDays(start, 6); // Monday to Sunday
-        return (
-          <span 
-            key={idx}
-            className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
-              isAllocated 
-                ? 'bg-success/10 text-success' 
-                : 'bg-primary/10 text-primary'
-            }`}
-            data-testid={`week-${weekStart}`}
-          >
-            {format(start, 'MMM d')} - {format(end, 'MMM d')}
-          </span>
-        );
-      })}
+    <div className="flex items-center gap-2 p-2 rounded-lg border bg-card">
+      <div className="flex-1">
+        <div className="text-sm font-medium text-foreground">
+          {format(start, 'MMM d')} - {format(end, 'MMM d')}
+        </div>
+        <div className="text-xs text-muted-foreground">
+          {choice === 'first' ? 'First Choice' : 'Second Choice'}
+        </div>
+      </div>
+      <div className="flex gap-1">
+        <Button
+          size="sm"
+          variant={isApproved ? "default" : "outline"}
+          onClick={onToggleApprove}
+          disabled={disabled}
+          className="h-8 w-20"
+          data-testid={`approve-week-${week}`}
+        >
+          <Check className="h-3 w-3 mr-1" />
+          {isApproved ? 'Approved' : 'Approve'}
+        </Button>
+        <Button
+          size="sm"
+          variant={isDenied ? "destructive" : "outline"}
+          onClick={onToggleDeny}
+          disabled={disabled}
+          className="h-8 w-16"
+          data-testid={`deny-week-${week}`}
+        >
+          <X className="h-3 w-3 mr-1" />
+          {isDenied ? 'Denied' : 'Deny'}
+        </Button>
+      </div>
     </div>
   );
 }
@@ -56,9 +96,64 @@ export default function RequestCard({
   request, 
   onApprove, 
   onDeny,
+  onUpdateWeeks,
   showActions = true 
 }: RequestCardProps) {
   const showWeeks = request.firstChoiceWeeks && request.secondChoiceWeeks;
+  
+  // Initialize state from request data
+  const [approvedWeeks, setApprovedWeeks] = useState<Set<string>>(
+    new Set(request.approvedWeeks || [])
+  );
+  const [deniedWeeks, setDeniedWeeks] = useState<Set<string>>(
+    new Set(request.deniedWeeks || [])
+  );
+  const [hasChanges, setHasChanges] = useState(false);
+  
+  const handleToggleApprove = (week: string) => {
+    const newApproved = new Set(approvedWeeks);
+    const newDenied = new Set(deniedWeeks);
+    
+    if (newApproved.has(week)) {
+      newApproved.delete(week);
+    } else {
+      newApproved.add(week);
+      newDenied.delete(week); // Can't be both approved and denied
+    }
+    
+    setApprovedWeeks(newApproved);
+    setDeniedWeeks(newDenied);
+    setHasChanges(true);
+  };
+  
+  const handleToggleDeny = (week: string) => {
+    const newApproved = new Set(approvedWeeks);
+    const newDenied = new Set(deniedWeeks);
+    
+    if (newDenied.has(week)) {
+      newDenied.delete(week);
+    } else {
+      newDenied.add(week);
+      newApproved.delete(week); // Can't be both approved and denied
+    }
+    
+    setApprovedWeeks(newApproved);
+    setDeniedWeeks(newDenied);
+    setHasChanges(true);
+  };
+  
+  const handleSave = () => {
+    if (onUpdateWeeks) {
+      onUpdateWeeks(request.id, Array.from(approvedWeeks), Array.from(deniedWeeks));
+      setHasChanges(false);
+    }
+  };
+  
+  // Combine all weeks from both choices
+  const allWeeks = [
+    ...(request.firstChoiceWeeks || []).map(week => ({ week, choice: 'first' as const })),
+    ...(request.secondChoiceWeeks || []).map(week => ({ week, choice: 'second' as const })),
+  ];
 
   return (
     <Card data-testid={`request-card-${request.id}`}>
@@ -87,89 +182,103 @@ export default function RequestCard({
           </div>
         )}
 
-        <div className="space-y-3">
-          {showWeeks ? (
-            <>
-              <div>
-                <p className="text-sm font-medium text-foreground mb-2">
-                  First Choice ({request.firstChoiceWeeks!.length} {request.firstChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
-                </p>
-                <WeeksList 
-                  weeks={request.firstChoiceWeeks!} 
-                  isAllocated={request.allocatedChoice === 'first'}
+        {showWeeks && showActions && request.status === 'pending' ? (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-medium text-foreground">
+                Requested Weeks ({allWeeks.length} total)
+              </p>
+              {hasChanges && (
+                <Button
+                  size="sm"
+                  onClick={handleSave}
+                  data-testid="button-save-weeks"
+                >
+                  <Save className="h-3 w-3 mr-1" />
+                  Save Changes
+                </Button>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              {allWeeks.map(({ week, choice }) => (
+                <WeekWithActions
+                  key={week}
+                  week={week}
+                  choice={choice}
+                  isApproved={approvedWeeks.has(week)}
+                  isDenied={deniedWeeks.has(week)}
+                  onToggleApprove={() => handleToggleApprove(week)}
+                  onToggleDeny={() => handleToggleDeny(week)}
                 />
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-foreground mb-2">
-                  Second Choice ({request.secondChoiceWeeks!.length} {request.secondChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
-                </p>
-                <WeeksList 
-                  weeks={request.secondChoiceWeeks!} 
-                  isAllocated={request.allocatedChoice === 'second'}
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div>
-                <p className="text-sm font-medium text-foreground mb-2">First Choice:</p>
-                <div className="flex flex-wrap gap-1">
-                  {request.requestedWeeks
-                    .filter(w => w.choice === 'first')
-                    .map((w, idx) => (
-                      <span 
-                        key={idx}
-                        className="inline-flex items-center px-2 py-1 rounded-md bg-primary/10 text-primary text-xs font-medium"
-                        data-testid={`week-first-${w.week}`}
-                      >
-                        Week {w.week}
-                      </span>
-                    ))}
-                </div>
-              </div>
-              
-              <div>
-                <p className="text-sm font-medium text-foreground mb-2">Second Choice:</p>
-                <div className="flex flex-wrap gap-1">
-                  {request.requestedWeeks
-                    .filter(w => w.choice === 'second')
-                    .map((w, idx) => (
-                      <span 
-                        key={idx}
-                        className="inline-flex items-center px-2 py-1 rounded-md bg-muted text-muted-foreground text-xs font-medium"
-                        data-testid={`week-second-${w.week}`}
-                      >
-                        Week {w.week}
-                      </span>
-                    ))}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {showActions && request.status === 'pending' && (
-          <div className="flex gap-2 pt-2">
-            <Button
-              className="flex-1 h-12"
-              onClick={() => onApprove?.(request.id)}
-              data-testid="button-approve"
-            >
-              <Check className="h-4 w-4 mr-2" />
-              Approve
-            </Button>
-            <Button
-              variant="destructive"
-              className="flex-1 h-12"
-              onClick={() => onDeny?.(request.id)}
-              data-testid="button-deny"
-            >
-              <X className="h-4 w-4 mr-2" />
-              Deny
-            </Button>
+              ))}
+            </div>
           </div>
-        )}
+        ) : showWeeks ? (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium text-foreground mb-2">
+                First Choice ({request.firstChoiceWeeks!.length} {request.firstChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {request.firstChoiceWeeks!.map((weekStart) => {
+                  const start = new Date(weekStart);
+                  const end = addDays(start, 6);
+                  const isApproved = request.approvedWeeks?.includes(weekStart);
+                  const isDenied = request.deniedWeeks?.includes(weekStart);
+                  return (
+                    <span 
+                      key={weekStart}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
+                        isApproved
+                          ? 'bg-success/10 text-success' 
+                          : isDenied
+                          ? 'bg-destructive/10 text-destructive'
+                          : 'bg-primary/10 text-primary'
+                      }`}
+                      data-testid={`week-${weekStart}`}
+                    >
+                      {format(start, 'MMM d')} - {format(end, 'MMM d')}
+                      {isApproved && <Check className="h-3 w-3 ml-2" />}
+                      {isDenied && <X className="h-3 w-3 ml-2" />}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            
+            <div>
+              <p className="text-sm font-medium text-foreground mb-2">
+                Second Choice ({request.secondChoiceWeeks!.length} {request.secondChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {request.secondChoiceWeeks!.map((weekStart) => {
+                  const start = new Date(weekStart);
+                  const end = addDays(start, 6);
+                  const isApproved = request.approvedWeeks?.includes(weekStart);
+                  const isDenied = request.deniedWeeks?.includes(weekStart);
+                  return (
+                    <span 
+                      key={weekStart}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
+                        isApproved
+                          ? 'bg-success/10 text-success' 
+                          : isDenied
+                          ? 'bg-destructive/10 text-destructive'
+                          : 'bg-primary/10 text-primary'
+                      }`}
+                      data-testid={`week-${weekStart}`}
+                    >
+                      {format(start, 'MMM d')} - {format(end, 'MMM d')}
+                      {isApproved && <Check className="h-3 w-3 ml-2" />}
+                      {isDenied && <X className="h-3 w-3 ml-2" />}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );

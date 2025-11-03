@@ -47,6 +47,25 @@ export default function SupervisorApp() {
     },
   });
 
+  // Mutation for updating individual weeks
+  const updateRequestWeeks = useMutation({
+    mutationFn: async ({ id, approvedWeeks, deniedWeeks }: {
+      id: string;
+      approvedWeeks: string[];
+      deniedWeeks: string[];
+    }) => {
+      const response = await apiRequest('PATCH', `/api/vacation-requests/${id}/weeks`, {
+        approvedWeeks,
+        deniedWeeks
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/vacation-requests'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/vacation-requests/conflicts'] });
+    },
+  });
+
   // Auto-allocate mutation
   const autoAllocate = useMutation({
     mutationFn: async () => {
@@ -65,6 +84,10 @@ export default function SupervisorApp() {
 
   const handleDeny = (id: string) => {
     updateRequestStatus.mutate({ id, status: 'denied', allocatedChoice: null });
+  };
+
+  const handleUpdateWeeks = (id: string, approvedWeeks: string[], deniedWeeks: string[]) => {
+    updateRequestWeeks.mutate({ id, approvedWeeks, deniedWeeks });
   };
 
   const handleAutoAllocate = () => {
@@ -143,6 +166,8 @@ export default function SupervisorApp() {
         firstChoiceWeeks: req.firstChoiceWeeks,
         secondChoiceWeeks: req.secondChoiceWeeks,
         allocatedChoice: req.allocatedChoice,
+        approvedWeeks: req.approvedWeeks,
+        deniedWeeks: req.deniedWeeks,
       };
     }).filter(Boolean);
   };
@@ -214,6 +239,7 @@ export default function SupervisorApp() {
                 request={request}
                 onApprove={handleApprove}
                 onDeny={handleDeny}
+                onUpdateWeeks={handleUpdateWeeks}
                 showActions={true}
               />
             ))}
