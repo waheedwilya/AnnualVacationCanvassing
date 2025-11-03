@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import StatusBadge, { type RequestStatus } from "./StatusBadge";
-import { Calendar } from "lucide-react";
+import { Calendar, Check, X } from "lucide-react";
 import { format, addDays } from "date-fns";
 
 interface VacationRequest {
@@ -11,25 +11,49 @@ interface VacationRequest {
   submittedDate: Date;
   firstChoiceWeeks?: string[];
   secondChoiceWeeks?: string[];
+  approvedWeeks?: string[];
+  deniedWeeks?: string[];
 }
 
 interface MyRequestsListProps {
   requests: VacationRequest[];
 }
 
-function WeeksList({ weeks }: { weeks: string[] }) {
+function WeeksList({ 
+  weeks, 
+  approvedWeeks = [], 
+  deniedWeeks = [] 
+}: { 
+  weeks: string[];
+  approvedWeeks?: string[];
+  deniedWeeks?: string[];
+}) {
+  const approvedSet = new Set(approvedWeeks);
+  const deniedSet = new Set(deniedWeeks);
+  
   return (
     <div className="flex flex-wrap gap-2">
       {weeks.map((weekStart, idx) => {
         const start = new Date(weekStart);
         const end = addDays(start, 6); // Monday to Sunday
+        const isApproved = approvedSet.has(weekStart);
+        const isDenied = deniedSet.has(weekStart);
+        
         return (
           <span 
             key={idx}
-            className="inline-flex items-center px-3 py-1.5 rounded-md bg-primary/10 text-primary text-sm font-medium"
+            className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
+              isApproved
+                ? 'bg-success/10 text-success' 
+                : isDenied
+                ? 'bg-destructive/10 text-destructive'
+                : 'bg-primary/10 text-primary'
+            }`}
             data-testid={`week-${weekStart}`}
           >
             {format(start, 'MMM d')} - {format(end, 'MMM d')}
+            {isApproved && <Check className="h-3 w-3 ml-2" />}
+            {isDenied && <X className="h-3 w-3 ml-2" />}
           </span>
         );
       })}
@@ -72,18 +96,40 @@ export default function MyRequestsList({ requests }: MyRequestsListProps) {
                     <p className="text-sm font-medium text-foreground mb-2">
                       First Choice ({request.firstChoiceWeeks!.length} {request.firstChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
                     </p>
-                    <WeeksList weeks={request.firstChoiceWeeks!} />
+                    <WeeksList 
+                      weeks={request.firstChoiceWeeks!} 
+                      approvedWeeks={request.approvedWeeks}
+                      deniedWeeks={request.deniedWeeks}
+                    />
                   </div>
                   <div>
                     <p className="text-sm font-medium text-foreground mb-2">
                       Second Choice ({request.secondChoiceWeeks!.length} {request.secondChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
                     </p>
-                    <WeeksList weeks={request.secondChoiceWeeks!} />
+                    <WeeksList 
+                      weeks={request.secondChoiceWeeks!} 
+                      approvedWeeks={request.approvedWeeks}
+                      deniedWeeks={request.deniedWeeks}
+                    />
                   </div>
-                  {(request.choice === 'first' || request.choice === 'second') && (
-                    <p className="text-sm text-primary font-medium">
-                      ✓ Allocated: {request.choice === 'first' ? 'First' : 'Second'} Choice
-                    </p>
+                  
+                  {/* Show summary if there are approved or denied weeks */}
+                  {(request.approvedWeeks && request.approvedWeeks.length > 0) && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-success/10 border border-success/20">
+                      <Check className="h-4 w-4 text-success" />
+                      <p className="text-sm text-success font-medium">
+                        {request.approvedWeeks.length} {request.approvedWeeks.length === 1 ? 'week' : 'weeks'} approved
+                      </p>
+                    </div>
+                  )}
+                  
+                  {(request.deniedWeeks && request.deniedWeeks.length > 0) && (
+                    <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                      <X className="h-4 w-4 text-destructive" />
+                      <p className="text-sm text-destructive font-medium">
+                        {request.deniedWeeks.length} {request.deniedWeeks.length === 1 ? 'week' : 'weeks'} denied
+                      </p>
+                    </div>
                   )}
                 </>
               ) : (

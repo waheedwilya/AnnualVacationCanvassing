@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
-export type RequestStatus = "pending" | "awarded_first" | "awarded_second" | "denied" | "conflict";
+export type RequestStatus = "pending" | "approved" | "awarded_first" | "awarded_second" | "denied" | "conflict";
 
 interface StatusBadgeProps {
   status: RequestStatus;
@@ -12,6 +12,10 @@ const statusConfig = {
   pending: {
     label: "Pending",
     className: "bg-warning text-warning-foreground border-warning-border",
+  },
+  approved: {
+    label: "Approved",
+    className: "bg-success text-success-foreground border-success-border",
   },
   awarded_first: {
     label: "Awarded 1st Choice",

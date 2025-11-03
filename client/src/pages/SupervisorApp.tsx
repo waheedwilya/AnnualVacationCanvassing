@@ -100,14 +100,8 @@ export default function SupervisorApp() {
   // Normalize all vacation requests to have display status
   const normalizedRequests = vacationRequests.map(req => {
     let displayStatus: 'pending' | 'approved' | 'denied';
-    if (req.status === 'approved' && req.allocatedChoice) {
-      displayStatus = 'approved';
-    } else if (req.status === 'approved' && !req.allocatedChoice) {
-      // Approved without allocation - treat as pending
-      displayStatus = 'pending';
-    } else {
-      displayStatus = req.status as 'pending' | 'approved' | 'denied';
-    }
+    // Use actual status field (auto-allocation sets this correctly now)
+    displayStatus = req.status as 'pending' | 'approved' | 'denied';
     return { ...req, displayStatus };
   });
 
@@ -142,12 +136,10 @@ export default function SupervisorApp() {
       
       // Convert status to proper display status
       let displayStatus: RequestStatus;
-      if (req.status === 'approved' && req.allocatedChoice) {
-        // Approved requests with allocation show which choice was awarded
-        displayStatus = req.allocatedChoice === 'second' ? 'awarded_second' : 'awarded_first';
-      } else if (req.status === 'approved' && !req.allocatedChoice) {
-        // Approved but not allocated (edge case/legacy data) - treat as pending
-        displayStatus = 'pending';
+      if (req.status === 'approved') {
+        // With individual week approvals, just show as approved
+        // Workers can see which specific weeks were approved in their view
+        displayStatus = 'approved';
       } else {
         displayStatus = req.status as RequestStatus;
       }

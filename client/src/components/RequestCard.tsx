@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Check, X, AlertTriangle, Save } from "lucide-react";
 import { format, addDays } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import StatusBadge, { type RequestStatus } from "./StatusBadge";
 import WorkerInfoCard from "./WorkerInfoCard";
 
@@ -109,6 +109,13 @@ export default function RequestCard({
     new Set(request.deniedWeeks || [])
   );
   const [hasChanges, setHasChanges] = useState(false);
+  
+  // Sync state when props change (e.g., after auto-allocation or other supervisor edits)
+  useEffect(() => {
+    setApprovedWeeks(new Set(request.approvedWeeks || []));
+    setDeniedWeeks(new Set(request.deniedWeeks || []));
+    setHasChanges(false);
+  }, [request.approvedWeeks, request.deniedWeeks, request.id]);
   
   const handleToggleApprove = (week: string) => {
     const newApproved = new Set(approvedWeeks);

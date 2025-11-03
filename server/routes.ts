@@ -284,53 +284,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return new Date(a.worker.joiningDate).getTime() - new Date(b.worker.joiningDate).getTime();
       });
       
-      // Track allocated weeks
+      // Track allocated weeks globally
       const allocatedWeeks = new Set<string>();
-      const results: Array<{ requestId: string; status: string; allocatedChoice: string }> = [];
+      const results: Array<{ 
+        requestId: string; 
+        approvedCount: number; 
+        deniedCount: number;
+        approvedWeeks: string[];
+        deniedWeeks: string[];
+      }> = [];
       
       // Process requests in seniority order
       for (const { request, worker } of requestsWithWorkers) {
-        let allocated = false;
+        const approvedWeeks: string[] = [];
+        const deniedWeeks: string[] = [];
         
-        // Try first choice
-        const firstChoiceConflicts = request.firstChoiceWeeks.some(week => allocatedWeeks.has(week));
+        // Calculate entitlement for this worker
+        const weeksEntitled = calculateVacationWeeks(worker.joiningDate);
         
-        if (!firstChoiceConflicts) {
-          // Allocate first choice
-          request.firstChoiceWeeks.forEach(week => allocatedWeeks.add(week));
-          await storage.updateVacationRequestStatus(request.id, 'approved', 'first');
-          results.push({ 
-            requestId: request.id, 
-            status: 'approved', 
-            allocatedChoice: 'first' 
-          });
-          allocated = true;
-        } else {
-          // Try second choice
-          const secondChoiceConflicts = request.secondChoiceWeeks.some(week => allocatedWeeks.has(week));
-          
-          if (!secondChoiceConflicts) {
-            // Allocate second choice
-            request.secondChoiceWeeks.forEach(week => allocatedWeeks.add(week));
-            await storage.updateVacationRequestStatus(request.id, 'approved', 'second');
-            results.push({ 
-              requestId: request.id, 
-              status: 'approved', 
-              allocatedChoice: 'second' 
-            });
-            allocated = true;
+        // Process first choice weeks first (preferred)
+        for (const week of request.firstChoiceWeeks) {
+          if (approvedWeeks.length >= weeksEntitled) {
+            // Already reached entitlement limit
+            deniedWeeks.push(week);
+          } else if (allocatedWeeks.has(week)) {
+            // Week is already taken by higher seniority worker
+            deniedWeeks.push(week);
+          } else {
+            // Week is available and within entitlement - approve it
+            approvedWeeks.push(week);
+            allocatedWeeks.add(week);
           }
         }
         
-        // If neither choice could be allocated, deny the request
-        if (!allocated) {
-          await storage.updateVacationRequestStatus(request.id, 'denied', null);
-          results.push({ 
-            requestId: request.id, 
-            status: 'denied', 
-            allocatedChoice: 'none' 
-          });
+        // If still under entitlement, try second choice weeks
+        if (approvedWeeks.length < weeksEntitled) {
+          for (const week of request.secondChoiceWeeks) {
+            // Skip if already processed (duplicate between choices)
+            if (approvedWeeks.includes(week) || deniedWeeks.includes(week)) {
+              continue;
+            }
+            
+            if (approvedWeeks.length >= weeksEntitled) {
+              // Already reached entitlement limit
+              deniedWeeks.push(week);
+            } else if (allocatedWeeks.has(week)) {
+              // Week is already taken by higher seniority worker
+              deniedWeeks.push(week);
+            } else {
+              // Week is available and within entitlement - approve it
+              approvedWeeks.push(week);
+              allocatedWeeks.add(week);
+            }
+          }
         }
+        
+        // Any second choice weeks that weren't processed should be denied
+        for (const week of request.secondChoiceWeeks) {
+          if (!approvedWeeks.includes(week) && !deniedWeeks.includes(week)) {
+            deniedWeeks.push(week);
+          }
+        }
+        
+        // Update the request with individual week approvals/denials
+        await storage.updateVacationRequestWeeks(
+          request.id,
+          approvedWeeks,
+          deniedWeeks
+        );
+        
+        // Update overall request status based on week allocation results
+        if (approvedWeeks.length > 0) {
+          // At least some weeks were approved - mark request as approved
+          await storage.updateVacationRequestStatus(request.id, 'approved', null);
+        } else {
+          // No weeks were approved - mark request as denied
+          await storage.updateVacationRequestStatus(request.id, 'denied', null);
+        }
+        
+        results.push({ 
+          requestId: request.id, 
+          approvedCount: approvedWeeks.length,
+          deniedCount: deniedWeeks.length,
+          approvedWeeks,
+          deniedWeeks
+        });
       }
       
       res.json({
@@ -339,6 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         results
       });
     } catch (error) {
+      console.error('Auto-allocation error:', error);
       res.status(500).json({ error: "Auto-allocation failed" });
     }
   });

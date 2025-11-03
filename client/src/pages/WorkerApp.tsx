@@ -152,6 +152,8 @@ export default function WorkerApp() {
               submittedDate: new Date(req.submittedAt),
               firstChoiceWeeks: req.firstChoiceWeeks,
               secondChoiceWeeks: req.secondChoiceWeeks,
+              approvedWeeks: req.approvedWeeks,
+              deniedWeeks: req.deniedWeeks,
             }))} />
           </div>
         )}
