@@ -361,12 +361,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       interface RequestWithSeniority {
         request: typeof pendingRequests[0];
         worker: typeof workers[0];
+        weeksEntitled: number;
       }
       
       const requestsWithWorkers: RequestWithSeniority[] = pendingRequests
         .map(req => {
           const worker = workerMap.get(req.workerId);
-          return worker ? { request: req, worker } : null;
+          if (!worker) return null;
+          const weeksEntitled = calculateVacationWeeks(worker.joiningDate);
+          return { request: req, worker, weeksEntitled };
         })
         .filter((item): item is RequestWithSeniority => item !== null);
       
@@ -377,6 +380,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Track allocated weeks globally
       const allocatedWeeks = new Set<string>();
+      
+      // Track approvals and denials for each request
+      const requestResults = new Map<string, {
+        approvedWeeks: string[];
+        deniedWeeks: string[];
+        firstChoiceApprovedCount: number;
+        weeksEntitled: number;
+      }>();
+      
+      // Initialize results map
+      for (const { request, weeksEntitled } of requestsWithWorkers) {
+        requestResults.set(request.id, {
+          approvedWeeks: [],
+          deniedWeeks: [],
+          firstChoiceApprovedCount: 0,
+          weeksEntitled
+        });
+      }
+      
+      // PHASE 1: Process ALL first choices by seniority
+      for (const { request } of requestsWithWorkers) {
+        const result = requestResults.get(request.id)!;
+        
+        for (const week of request.firstChoiceWeeks) {
+          if (result.approvedWeeks.length >= result.weeksEntitled) {
+            // Already reached entitlement limit
+            result.deniedWeeks.push(week);
+          } else if (allocatedWeeks.has(week)) {
+            // Week is already taken by higher seniority worker
+            result.deniedWeeks.push(week);
+          } else {
+            // Week is available and within entitlement - approve it
+            result.approvedWeeks.push(week);
+            allocatedWeeks.add(week);
+            result.firstChoiceApprovedCount++;
+          }
+        }
+      }
+      
+      // PHASE 2: Process second choices with priority for workers who didn't get full first choice
+      // Split into two groups: first choice losers (priority) and first choice winners
+      const firstChoiceLosers: RequestWithSeniority[] = [];
+      const firstChoiceWinners: RequestWithSeniority[] = [];
+      
+      for (const item of requestsWithWorkers) {
+        const result = requestResults.get(item.request.id)!;
+        // If worker didn't get all their first choice weeks approved, they're a "loser" and get priority
+        if (result.firstChoiceApprovedCount < item.request.firstChoiceWeeks.length) {
+          firstChoiceLosers.push(item);
+        } else {
+          firstChoiceWinners.push(item);
+        }
+      }
+      
+      // Process second choices for first choice losers first (with priority)
+      for (const { request } of firstChoiceLosers) {
+        const result = requestResults.get(request.id)!;
+        
+        for (const week of request.secondChoiceWeeks) {
+          // Skip if already processed in first choice
+          if (result.approvedWeeks.includes(week) || result.deniedWeeks.includes(week)) {
+            continue;
+          }
+          
+          if (result.approvedWeeks.length >= result.weeksEntitled) {
+            // Already reached entitlement limit
+            result.deniedWeeks.push(week);
+          } else if (allocatedWeeks.has(week)) {
+            // Week is already taken
+            result.deniedWeeks.push(week);
+          } else {
+            // Week is available and within entitlement - approve it
+            result.approvedWeeks.push(week);
+            allocatedWeeks.add(week);
+          }
+        }
+      }
+      
+      // Process second choices for first choice winners (lower priority)
+      for (const { request } of firstChoiceWinners) {
+        const result = requestResults.get(request.id)!;
+        
+        for (const week of request.secondChoiceWeeks) {
+          // Skip if already processed in first choice
+          if (result.approvedWeeks.includes(week) || result.deniedWeeks.includes(week)) {
+            continue;
+          }
+          
+          if (result.approvedWeeks.length >= result.weeksEntitled) {
+            // Already reached entitlement limit
+            result.deniedWeeks.push(week);
+          } else if (allocatedWeeks.has(week)) {
+            // Week is already taken
+            result.deniedWeeks.push(week);
+          } else {
+            // Week is available and within entitlement - approve it
+            result.approvedWeeks.push(week);
+            allocatedWeeks.add(week);
+          }
+        }
+      }
+      
+      // PHASE 3: Update all requests in database
       const results: Array<{ 
         requestId: string; 
         approvedCount: number; 
@@ -385,67 +491,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deniedWeeks: string[];
       }> = [];
       
-      // Process requests in seniority order
-      for (const { request, worker } of requestsWithWorkers) {
-        const approvedWeeks: string[] = [];
-        const deniedWeeks: string[] = [];
+      for (const { request } of requestsWithWorkers) {
+        const result = requestResults.get(request.id)!;
         
-        // Calculate entitlement for this worker
-        const weeksEntitled = calculateVacationWeeks(worker.joiningDate);
-        
-        // Process first choice weeks first (preferred)
-        for (const week of request.firstChoiceWeeks) {
-          if (approvedWeeks.length >= weeksEntitled) {
-            // Already reached entitlement limit
-            deniedWeeks.push(week);
-          } else if (allocatedWeeks.has(week)) {
-            // Week is already taken by higher seniority worker
-            deniedWeeks.push(week);
-          } else {
-            // Week is available and within entitlement - approve it
-            approvedWeeks.push(week);
-            allocatedWeeks.add(week);
-          }
-        }
-        
-        // If still under entitlement, try second choice weeks
-        if (approvedWeeks.length < weeksEntitled) {
-          for (const week of request.secondChoiceWeeks) {
-            // Skip if already processed (duplicate between choices)
-            if (approvedWeeks.includes(week) || deniedWeeks.includes(week)) {
-              continue;
-            }
-            
-            if (approvedWeeks.length >= weeksEntitled) {
-              // Already reached entitlement limit
-              deniedWeeks.push(week);
-            } else if (allocatedWeeks.has(week)) {
-              // Week is already taken by higher seniority worker
-              deniedWeeks.push(week);
-            } else {
-              // Week is available and within entitlement - approve it
-              approvedWeeks.push(week);
-              allocatedWeeks.add(week);
-            }
-          }
-        }
-        
-        // Any second choice weeks that weren't processed should be denied
+        // Ensure all second choice weeks are accounted for
         for (const week of request.secondChoiceWeeks) {
-          if (!approvedWeeks.includes(week) && !deniedWeeks.includes(week)) {
-            deniedWeeks.push(week);
+          if (!result.approvedWeeks.includes(week) && !result.deniedWeeks.includes(week)) {
+            result.deniedWeeks.push(week);
           }
         }
         
         // Update the request with individual week approvals/denials
         await storage.updateVacationRequestWeeks(
           request.id,
-          approvedWeeks,
-          deniedWeeks
+          result.approvedWeeks,
+          result.deniedWeeks
         );
         
         // Update overall request status based on week allocation results
-        if (approvedWeeks.length > 0) {
+        if (result.approvedWeeks.length > 0) {
           // At least some weeks were approved - mark request as approved
           await storage.updateVacationRequestStatus(request.id, 'approved', null);
         } else {
@@ -455,10 +519,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         results.push({ 
           requestId: request.id, 
-          approvedCount: approvedWeeks.length,
-          deniedCount: deniedWeeks.length,
-          approvedWeeks,
-          deniedWeeks
+          approvedCount: result.approvedWeeks.length,
+          deniedCount: result.deniedWeeks.length,
+          approvedWeeks: result.approvedWeeks,
+          deniedWeeks: result.deniedWeeks
         });
       }
       
