@@ -17,19 +17,23 @@ interface VacationRequest {
 
 interface MyRequestsListProps {
   requests: VacationRequest[];
+  conflictingWeeks?: string[];
 }
 
 function WeeksList({ 
   weeks, 
   approvedWeeks = [], 
-  deniedWeeks = [] 
+  deniedWeeks = [],
+  conflictingWeeks = []
 }: { 
   weeks: string[];
   approvedWeeks?: string[];
   deniedWeeks?: string[];
+  conflictingWeeks?: string[];
 }) {
   const approvedSet = new Set(approvedWeeks);
   const deniedSet = new Set(deniedWeeks);
+  const conflictSet = new Set(conflictingWeeks);
   
   return (
     <div className="flex flex-wrap gap-2">
@@ -38,6 +42,7 @@ function WeeksList({
         const end = addDays(start, 6); // Monday to Sunday
         const isApproved = approvedSet.has(weekStart);
         const isDenied = deniedSet.has(weekStart);
+        const isConflicting = conflictSet.has(weekStart);
         
         return (
           <span 
@@ -47,6 +52,8 @@ function WeeksList({
                 ? 'bg-success/10 text-success' 
                 : isDenied
                 ? 'bg-destructive/10 text-destructive'
+                : isConflicting
+                ? 'bg-warning/20 text-warning border border-warning/40'
                 : 'bg-primary/10 text-primary'
             }`}
             data-testid={`week-${weekStart}`}
@@ -61,7 +68,7 @@ function WeeksList({
   );
 }
 
-export default function MyRequestsList({ requests }: MyRequestsListProps) {
+export default function MyRequestsList({ requests, conflictingWeeks = [] }: MyRequestsListProps) {
   if (requests.length === 0) {
     return (
       <Card data-testid="my-requests-empty">
@@ -76,8 +83,27 @@ export default function MyRequestsList({ requests }: MyRequestsListProps) {
     );
   }
 
+  const hasConflicts = conflictingWeeks.length > 0;
+
   return (
     <div className="space-y-4" data-testid="my-requests-list">
+      {hasConflicts && (
+        <div className="flex items-start gap-3 p-4 rounded-lg bg-warning/10 border border-warning/20">
+          <div className="flex-shrink-0 w-5 h-5 rounded-full bg-warning/20 flex items-center justify-center mt-0.5">
+            <span className="text-warning text-xs font-bold">!</span>
+          </div>
+          <div>
+            <p className="text-sm font-medium text-warning mb-1">
+              Conflicting Weeks Detected
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Some of your requested weeks conflict with higher seniority workers' requests. 
+              These weeks are highlighted with a yellow border and may not be approved.
+            </p>
+          </div>
+        </div>
+      )}
+      
       {requests.map((request) => {
         const showWeeks = request.firstChoiceWeeks && request.secondChoiceWeeks;
         
@@ -100,6 +126,7 @@ export default function MyRequestsList({ requests }: MyRequestsListProps) {
                       weeks={request.firstChoiceWeeks!} 
                       approvedWeeks={request.approvedWeeks}
                       deniedWeeks={request.deniedWeeks}
+                      conflictingWeeks={conflictingWeeks}
                     />
                   </div>
                   <div>
@@ -110,6 +137,7 @@ export default function MyRequestsList({ requests }: MyRequestsListProps) {
                       weeks={request.secondChoiceWeeks!} 
                       approvedWeeks={request.approvedWeeks}
                       deniedWeeks={request.deniedWeeks}
+                      conflictingWeeks={conflictingWeeks}
                     />
                   </div>
                   

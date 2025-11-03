@@ -50,6 +50,14 @@ export default function WorkerApp() {
     queryKey: [`/api/vacation-requests?workerId=${workerId}`],
     enabled: !!workerId,
   });
+
+  // Fetch conflicting weeks for this worker (weeks that conflict with higher seniority workers)
+  const { data: conflictData } = useQuery<{ conflictingWeeks: string[] }>({
+    queryKey: [`/api/vacation-requests/worker-conflicts/${workerId}`],
+    enabled: !!workerId,
+  });
+  
+  const conflictingWeeks = conflictData?.conflictingWeeks || [];
   
   // Submit vacation request mutation
   const submitRequest = useMutation({
@@ -77,6 +85,7 @@ export default function WorkerApp() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/vacation-requests?workerId=${workerId}`] });
       queryClient.invalidateQueries({ queryKey: ['/api/vacation-requests'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/vacation-requests/worker-conflicts/${workerId}`] });
       toast({
         title: "Request Submitted",
         description: "Your vacation request has been submitted successfully.",
@@ -167,7 +176,9 @@ export default function WorkerApp() {
         {currentView === 'my-requests' && (
           <div className="max-w-4xl mx-auto">
             <h1 className="text-2xl font-bold text-foreground mb-6">My Vacation Requests</h1>
-            <MyRequestsList requests={vacationRequests.map(req => ({
+            <MyRequestsList 
+              conflictingWeeks={conflictingWeeks}
+              requests={vacationRequests.map(req => ({
               id: req.id,
               choice: (req.allocatedChoice === 'first' || req.allocatedChoice === 'second') 
                 ? req.allocatedChoice 

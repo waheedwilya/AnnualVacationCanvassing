@@ -188,6 +188,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Get conflicts for a specific worker (only weeks conflicting with higher seniority)
+  app.get("/api/vacation-requests/worker-conflicts/:workerId", async (req, res) => {
+    const { workerId } = req.params;
+    
+    // Get worker's requests
+    const workerRequests = await storage.getVacationRequestsByWorker(workerId);
+    const pendingWorkerRequests = workerRequests.filter(r => r.status === 'pending');
+    
+    if (pendingWorkerRequests.length === 0) {
+      return res.json({ conflictingWeeks: [] });
+    }
+    
+    // Get the worker
+    const worker = await storage.getWorker(workerId);
+    if (!worker) {
+      return res.status(404).json({ error: "Worker not found" });
+    }
+    
+    // Get all pending requests and workers
+    const allPendingRequests = await storage.getPendingVacationRequests();
+    const allWorkers = await storage.getAllWorkers();
+    const workerMap = new Map(allWorkers.map(w => [w.id, w]));
+    
+    const conflictingWeeks: string[] = [];
+    
+    // For each of the worker's requests
+    for (const myRequest of pendingWorkerRequests) {
+      // Check against other workers' requests
+      for (const otherRequest of allPendingRequests) {
+        if (myRequest.id === otherRequest.id) continue;
+        
+        const otherWorker = workerMap.get(otherRequest.workerId);
+        if (!otherWorker) continue;
+        
+        // Only show conflicts with higher seniority workers (earlier joining date = more seniority)
+        if (new Date(otherWorker.joiningDate) >= new Date(worker.joiningDate)) {
+          continue;
+        }
+        
+        // Find overlapping weeks
+        const myFirstChoice = myRequest.firstChoiceWeeks;
+        const mySecondChoice = myRequest.secondChoiceWeeks;
+        const otherFirstChoice = otherRequest.firstChoiceWeeks;
+        const otherSecondChoice = otherRequest.secondChoiceWeeks;
+        
+        // Check conflicts in my first choice
+        myFirstChoice.forEach(week => {
+          if (otherFirstChoice.includes(week) || otherSecondChoice.includes(week)) {
+            if (!conflictingWeeks.includes(week)) {
+              conflictingWeeks.push(week);
+            }
+          }
+        });
+        
+        // Check conflicts in my second choice
+        mySecondChoice.forEach(week => {
+          if (otherFirstChoice.includes(week) || otherSecondChoice.includes(week)) {
+            if (!conflictingWeeks.includes(week)) {
+              conflictingWeeks.push(week);
+            }
+          }
+        });
+      }
+    }
+    
+    res.json({ conflictingWeeks });
+  });
+
   app.post("/api/vacation-requests", async (req, res) => {
     try {
       const validatedData = insertVacationRequestSchema.parse(req.body);
