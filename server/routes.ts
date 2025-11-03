@@ -137,6 +137,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (i === j) continue;
         
         const req2 = pendingRequests[j];
+        const worker2 = workerMap.get(req2.workerId);
+        if (!worker2) continue;
+        
+        // Only check conflicts within the same department
+        if (worker1.department !== worker2.department) continue;
         
         const conflictTypes: string[] = [];
         
@@ -188,7 +193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Get conflicts for a specific worker (only weeks conflicting with higher seniority)
+  // Get conflicts for a specific worker (only weeks conflicting with higher seniority in same department)
   app.get("/api/vacation-requests/worker-conflicts/:workerId", async (req, res) => {
     const { workerId } = req.params;
     
@@ -221,6 +226,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const otherWorker = workerMap.get(otherRequest.workerId);
         if (!otherWorker) continue;
+        
+        // Only check workers in the same department
+        if (otherWorker.department !== worker.department) continue;
         
         // Only show conflicts with higher seniority workers (earlier joining date = more seniority)
         if (new Date(otherWorker.joiningDate) >= new Date(worker.joiningDate)) {
@@ -378,8 +386,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return new Date(a.worker.joiningDate).getTime() - new Date(b.worker.joiningDate).getTime();
       });
       
-      // Track allocated weeks globally
-      const allocatedWeeks = new Set<string>();
+      // Track allocated weeks per department (key: department, value: Set of week dates)
+      const allocatedWeeksByDepartment = new Map<string, Set<string>>();
+      
+      // Initialize department tracking
+      for (const worker of workers) {
+        if (!allocatedWeeksByDepartment.has(worker.department)) {
+          allocatedWeeksByDepartment.set(worker.department, new Set<string>());
+        }
+      }
       
       // Track approvals and denials for each request
       const requestResults = new Map<string, {
@@ -400,20 +415,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // PHASE 1: Process ALL first choices by seniority
-      for (const { request } of requestsWithWorkers) {
+      for (const { request, worker } of requestsWithWorkers) {
         const result = requestResults.get(request.id)!;
+        const departmentWeeks = allocatedWeeksByDepartment.get(worker.department)!;
         
         for (const week of request.firstChoiceWeeks) {
           if (result.approvedWeeks.length >= result.weeksEntitled) {
             // Already reached entitlement limit
             result.deniedWeeks.push(week);
-          } else if (allocatedWeeks.has(week)) {
-            // Week is already taken by higher seniority worker
+          } else if (departmentWeeks.has(week)) {
+            // Week is already taken by higher seniority worker in same department
             result.deniedWeeks.push(week);
           } else {
-            // Week is available and within entitlement - approve it
+            // Week is available in department and within entitlement - approve it
             result.approvedWeeks.push(week);
-            allocatedWeeks.add(week);
+            departmentWeeks.add(week);
             result.firstChoiceApprovedCount++;
           }
         }
@@ -435,8 +451,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Process second choices for first choice losers first (with priority)
-      for (const { request } of firstChoiceLosers) {
+      for (const { request, worker } of firstChoiceLosers) {
         const result = requestResults.get(request.id)!;
+        const departmentWeeks = allocatedWeeksByDepartment.get(worker.department)!;
         
         for (const week of request.secondChoiceWeeks) {
           // Skip if already processed in first choice
@@ -447,20 +464,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (result.approvedWeeks.length >= result.weeksEntitled) {
             // Already reached entitlement limit
             result.deniedWeeks.push(week);
-          } else if (allocatedWeeks.has(week)) {
-            // Week is already taken
+          } else if (departmentWeeks.has(week)) {
+            // Week is already taken in department
             result.deniedWeeks.push(week);
           } else {
-            // Week is available and within entitlement - approve it
+            // Week is available in department and within entitlement - approve it
             result.approvedWeeks.push(week);
-            allocatedWeeks.add(week);
+            departmentWeeks.add(week);
           }
         }
       }
       
       // Process second choices for first choice winners (lower priority)
-      for (const { request } of firstChoiceWinners) {
+      for (const { request, worker } of firstChoiceWinners) {
         const result = requestResults.get(request.id)!;
+        const departmentWeeks = allocatedWeeksByDepartment.get(worker.department)!;
         
         for (const week of request.secondChoiceWeeks) {
           // Skip if already processed in first choice
@@ -471,13 +489,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (result.approvedWeeks.length >= result.weeksEntitled) {
             // Already reached entitlement limit
             result.deniedWeeks.push(week);
-          } else if (allocatedWeeks.has(week)) {
-            // Week is already taken
+          } else if (departmentWeeks.has(week)) {
+            // Week is already taken in department
             result.deniedWeeks.push(week);
           } else {
-            // Week is available and within entitlement - approve it
+            // Week is available in department and within entitlement - approve it
             result.approvedWeeks.push(week);
-            allocatedWeeks.add(week);
+            departmentWeeks.add(week);
           }
         }
       }
