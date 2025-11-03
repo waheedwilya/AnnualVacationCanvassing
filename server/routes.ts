@@ -238,6 +238,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(request);
   });
 
+  app.patch("/api/vacation-requests/:id/weeks", async (req, res) => {
+    const { approvedWeeks, deniedWeeks } = req.body;
+    
+    if (!Array.isArray(approvedWeeks) || !Array.isArray(deniedWeeks)) {
+      return res.status(400).json({ error: "approvedWeeks and deniedWeeks must be arrays" });
+    }
+    
+    const request = await storage.updateVacationRequestWeeks(
+      req.params.id,
+      approvedWeeks,
+      deniedWeeks
+    );
+    
+    if (!request) {
+      return res.status(404).json({ error: "Request not found" });
+    }
+    
+    res.json(request);
+  });
+
   app.post("/api/vacation-requests/auto-allocate", async (_req, res) => {
     try {
       const pendingRequests = await storage.getPendingVacationRequests();

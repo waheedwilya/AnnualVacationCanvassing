@@ -20,6 +20,10 @@ export const vacationRequests = pgTable("vacation_requests", {
   firstChoiceWeeks: text("first_choice_weeks").array().notNull(),
   secondChoiceWeeks: text("second_choice_weeks").array().notNull(),
   
+  // Individual week approvals - array of approved week dates
+  approvedWeeks: text("approved_weeks").array().notNull().default(sql`ARRAY[]::text[]`),
+  deniedWeeks: text("denied_weeks").array().notNull().default(sql`ARRAY[]::text[]`),
+  
   status: text("status").notNull().default("pending"),
   allocatedChoice: text("allocated_choice"),
   

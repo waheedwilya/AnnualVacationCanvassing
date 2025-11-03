@@ -27,6 +27,7 @@ export interface IStorage {
   getPendingVacationRequests(): Promise<VacationRequest[]>;
   createVacationRequest(request: InsertVacationRequest): Promise<VacationRequest>;
   updateVacationRequestStatus(id: string, status: string, allocatedChoice?: string | null): Promise<VacationRequest | undefined>;
+  updateVacationRequestWeeks(id: string, approvedWeeks: string[], deniedWeeks: string[]): Promise<VacationRequest | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -99,6 +100,8 @@ export class MemStorage implements IStorage {
       status: insertRequest.status ?? 'pending',
       year: insertRequest.year ?? 2026,
       allocatedChoice: insertRequest.allocatedChoice ?? null,
+      approvedWeeks: [],
+      deniedWeeks: [],
       submittedAt: new Date()
     };
     this.vacationRequests.set(id, request);
@@ -117,6 +120,23 @@ export class MemStorage implements IStorage {
       ...request,
       status,
       allocatedChoice: allocatedChoice !== undefined ? allocatedChoice : request.allocatedChoice
+    };
+    this.vacationRequests.set(id, updatedRequest);
+    return updatedRequest;
+  }
+
+  async updateVacationRequestWeeks(
+    id: string,
+    approvedWeeks: string[],
+    deniedWeeks: string[]
+  ): Promise<VacationRequest | undefined> {
+    const request = this.vacationRequests.get(id);
+    if (!request) return undefined;
+    
+    const updatedRequest = {
+      ...request,
+      approvedWeeks,
+      deniedWeeks
     };
     this.vacationRequests.set(id, updatedRequest);
     return updatedRequest;
@@ -221,6 +241,20 @@ export class PgStorage implements IStorage {
     const result = await this.db
       .update(vacationRequests)
       .set(updates)
+      .where(eq(vacationRequests.id, id))
+      .returning();
+    
+    return result[0];
+  }
+
+  async updateVacationRequestWeeks(
+    id: string,
+    approvedWeeks: string[],
+    deniedWeeks: string[]
+  ): Promise<VacationRequest | undefined> {
+    const result = await this.db
+      .update(vacationRequests)
+      .set({ approvedWeeks, deniedWeeks })
       .where(eq(vacationRequests.id, id))
       .returning();
     
