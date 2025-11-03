@@ -17,7 +17,7 @@ import { calculateVacationWeeks } from "@shared/utils";
 
 // State management for week approvals
 type WeekAction = {
-  type: 'APPROVE' | 'DENY' | 'CLEAR' | 'RESET';
+  type: 'APPROVE' | 'DENY' | 'CLEAR' | 'CLEAR_REQUEST' | 'RESET';
   requestId?: string;
   week?: string;
 };
@@ -29,6 +29,12 @@ function weekChangesReducer(state: WeekChanges, action: WeekAction): WeekChanges
   
   if (action.type === 'RESET') {
     return new Map();
+  }
+  
+  if (action.type === 'CLEAR_REQUEST') {
+    if (!action.requestId) return state;
+    newState.delete(action.requestId);
+    return newState;
   }
   
   if (!action.requestId || !action.week) return state;
@@ -159,16 +165,13 @@ export default function SupervisorApp() {
     
     await handleUpdateWeeks(requestId, Array.from(finalApprovedWeeks), Array.from(finalDeniedWeeks));
     
-    // Clear changes for this request
-    const newChanges = new Map(weekChanges);
-    newChanges.delete(requestId);
-    dispatchWeekChange({ type: 'RESET' });
+    // Clear changes for only this request
+    dispatchWeekChange({ type: 'CLEAR_REQUEST', requestId });
   };
 
   const handleDiscardChanges = (requestId: string) => {
-    const newChanges = new Map(weekChanges);
-    newChanges.delete(requestId);
-    dispatchWeekChange({ type: 'RESET' });
+    // Clear changes for only this request
+    dispatchWeekChange({ type: 'CLEAR_REQUEST', requestId });
   };
 
   // Create worker map for quick lookup
