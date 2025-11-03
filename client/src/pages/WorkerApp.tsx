@@ -20,9 +20,25 @@ export default function WorkerApp() {
   const { toast } = useToast();
   
   // Get logged-in worker from localStorage
-  const currentWorkerData = localStorage.getItem('currentWorker');
-  const currentWorker: Worker | null = currentWorkerData ? JSON.parse(currentWorkerData) : null;
-  const workerId = currentWorker?.id;
+  let initialWorker: Worker | null = null;
+  let workerId: string | undefined;
+  
+  try {
+    const currentWorkerData = localStorage.getItem('currentWorker');
+    initialWorker = currentWorkerData ? JSON.parse(currentWorkerData) : null;
+    workerId = initialWorker?.id;
+  } catch (error) {
+    // If parsing fails, clear localStorage and redirect to login
+    localStorage.removeItem('currentWorker');
+    setLocation('/login');
+  }
+
+  // Fetch fresh worker data from API to reflect any profile updates
+  const { data: currentWorker } = useQuery<Worker>({
+    queryKey: [`/api/workers/${workerId}`],
+    enabled: !!workerId,
+    initialData: initialWorker || undefined,
+  });
 
   const handleLogout = () => {
     localStorage.removeItem('currentWorker');
