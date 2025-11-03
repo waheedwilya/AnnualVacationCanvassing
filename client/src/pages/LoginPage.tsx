@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { LogIn } from "lucide-react";
+import { LogIn, Shield } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { Worker } from "@shared/schema";
 
@@ -87,6 +87,15 @@ export default function LoginPage() {
             <div className="text-center text-sm text-muted-foreground">
               <p>Test phone numbers:</p>
               <p>5513759096, 2272185752, 2813527628</p>
+            </div>
+
+            <div className="pt-4 border-t">
+              <Link href="/supervisor">
+                <Button variant="outline" className="w-full" data-testid="link-supervisor">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Switch to Supervisor
+                </Button>
+              </Link>
             </div>
           </form>
         </CardContent>

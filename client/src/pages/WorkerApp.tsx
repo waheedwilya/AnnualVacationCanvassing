@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Home, FileText, Calendar, User, LogOut } from "lucide-react";
+import { Home, FileText, Calendar, User, LogOut, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import WorkerDashboard from "@/components/WorkerDashboard";
 import VacationRequestForm from "@/components/VacationRequestForm";
@@ -120,10 +120,18 @@ export default function WorkerApp() {
           <h1 className="text-lg font-semibold text-foreground">Worker Portal</h1>
           <p className="text-sm text-muted-foreground">{currentWorker.name}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={handleLogout} data-testid="button-logout">
-          <LogOut className="w-4 h-4 mr-2" />
-          Logout
-        </Button>
+        <div className="flex gap-2">
+          <Link href="/supervisor">
+            <Button variant="outline" size="sm" data-testid="link-supervisor">
+              <Shield className="w-4 h-4 mr-2" />
+              Supervisor
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm" onClick={handleLogout} data-testid="button-logout">
+            <LogOut className="w-4 h-4 mr-2" />
+            Logout
+          </Button>
+        </div>
       </header>
       
       {/* Main Content */}
