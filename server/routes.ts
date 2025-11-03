@@ -23,7 +23,11 @@ function isDateIn2026(dateStr: string): boolean {
 }
 
 // Helper function to check if two week arrays have any overlap
-function weeksOverlap(weeks1: string[], weeks2: string[]): boolean {
+function weeksOverlap(weeks1: string[] | null | undefined, weeks2: string[] | null | undefined): boolean {
+  // Handle null/undefined cases
+  if (!weeks1 || !weeks2 || weeks1.length === 0 || weeks2.length === 0) {
+    return false;
+  }
   // Convert to Set for efficient lookup
   const set1 = new Set(weeks1);
   return weeks2.some(week => set1.has(week));
