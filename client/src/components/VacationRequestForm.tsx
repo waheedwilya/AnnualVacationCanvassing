@@ -19,17 +19,17 @@ export default function VacationRequestForm({
   conflictingWeeks = [],
   departmentLimitWeeks = []
 }: VacationRequestFormProps) {
-  const requiredWeeks = availableWeeks * 2; // Must select exactly 2× entitlement
+  const maxWeeks = availableWeeks * 2; // Can select up to 2× entitlement
   const [prioritizedWeeks, setPrioritizedWeeks] = useState<Date[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (prioritizedWeeks.length !== requiredWeeks) return;
+    if (prioritizedWeeks.length === 0 || prioritizedWeeks.length > maxWeeks) return;
     
     onSubmit?.(prioritizedWeeks);
   };
 
-  const isFormValid = prioritizedWeeks.length === requiredWeeks;
+  const isFormValid = prioritizedWeeks.length > 0 && prioritizedWeeks.length <= maxWeeks;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -37,7 +37,7 @@ export default function VacationRequestForm({
         <CardHeader>
           <CardTitle>Submit Vacation Request</CardTitle>
           <CardDescription>
-            Select exactly {requiredWeeks} priority weeks in order of preference (most preferred first).
+            Select up to {maxWeeks} priority weeks in order of preference (most preferred first).
             {availableWeeks === 0 ? (
               <span className="text-destructive font-medium block mt-2">
                 You need at least 1 year of service to be eligible for vacation.
@@ -45,7 +45,7 @@ export default function VacationRequestForm({
             ) : (
               <span className="font-medium block mt-2">
                 You are entitled to {availableWeeks} {availableWeeks === 1 ? 'week' : 'weeks'} based on your seniority.
-                You must select {requiredWeeks} priority weeks (2× your entitlement).
+                You can select up to {maxWeeks} priority weeks (up to 2× your entitlement).
               </span>
             )}
           </CardDescription>
@@ -54,7 +54,7 @@ export default function VacationRequestForm({
           <PriorityWeeksPicker
             selectedWeeks={prioritizedWeeks}
             onWeeksChange={setPrioritizedWeeks}
-            maxWeeks={requiredWeeks}
+            maxWeeks={maxWeeks}
             disabled={availableWeeks === 0 || isSubmitting}
             conflictingWeeks={conflictingWeeks}
             departmentLimitWeeks={departmentLimitWeeks}
@@ -66,7 +66,7 @@ export default function VacationRequestForm({
             disabled={!isFormValid || availableWeeks === 0 || isSubmitting}
             data-testid="button-submit-request"
           >
-            {isSubmitting ? 'Submitting...' : `Submit Vacation Request (${prioritizedWeeks.length}/${requiredWeeks} weeks)`}
+            {isSubmitting ? 'Submitting...' : `Submit Vacation Request (${prioritizedWeeks.length}${maxWeeks > 0 ? `/${maxWeeks}` : ''} weeks)`}
           </Button>
         </CardContent>
       </Card>

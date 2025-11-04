@@ -301,11 +301,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ error: "All weeks must be in 2026" });
         }
         
-        // Validate week count: must be exactly 2× entitlement
-        const requiredWeeks = weeksEntitled * 2;
-        if (validatedData.prioritizedWeeks.length !== requiredWeeks) {
+        // Validate week count: must be between 1 and 2× entitlement
+        const maxWeeks = weeksEntitled * 2;
+        if (validatedData.prioritizedWeeks.length === 0) {
           return res.status(400).json({ 
-            error: `You must select exactly ${requiredWeeks} priority weeks (2× your entitlement of ${weeksEntitled} weeks)` 
+            error: "You must select at least 1 priority week"
+          });
+        }
+        if (validatedData.prioritizedWeeks.length > maxWeeks) {
+          return res.status(400).json({ 
+            error: `You can select up to ${maxWeeks} priority weeks (2× your entitlement of ${weeksEntitled} weeks). You selected ${validatedData.prioritizedWeeks.length} weeks.` 
           });
         }
         
