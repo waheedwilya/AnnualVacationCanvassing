@@ -57,20 +57,63 @@ export default function WorkerApp() {
     enabled: !!workerId,
   });
   
+  // Fetch all pending requests to calculate department limits
+  const { data: allPendingRequests = [] } = useQuery<VacationRequest[]>({
+    queryKey: ['/api/vacation-requests/pending'],
+    enabled: !!currentWorker,
+  });
+  
+  // Fetch all workers to match with requests
+  const { data: allWorkers = [] } = useQuery<Worker[]>({
+    queryKey: ['/api/workers'],
+    enabled: !!currentWorker,
+  });
+  
   const conflictingWeeks = conflictData?.conflictingWeeks || [];
+  
+  // Calculate department limit weeks (weeks where department has reached capacity)
+  // Check all pending requests (not just approved) to see if department limit is reached
+  // (Assuming department limit is 1 worker per week - this should be configurable)
+  const departmentLimitWeeks: string[] = [];
+  if (currentWorker && allPendingRequests.length > 0 && allWorkers.length > 0) {
+    const workerMap = new Map(allWorkers.map(w => [w.id, w]));
+    const weekCountsByDept = new Map<string, number>(); // week -> count in same department
+    
+    // Count requests per week per department (including pending)
+    for (const request of allPendingRequests) {
+      const worker = workerMap.get(request.workerId);
+      if (!worker || worker.department !== currentWorker.department) continue;
+      
+      // Get all weeks (prioritized or legacy) - don't just check approved
+      const weeks = request.prioritizedWeeks || 
+        [...(request.firstChoiceWeeks || []), ...(request.secondChoiceWeeks || [])];
+      
+      // Count approved weeks (already allocated)
+      const approvedWeeks = request.approvedWeeks || [];
+      for (const week of approvedWeeks) {
+        weekCountsByDept.set(week, (weekCountsByDept.get(week) || 0) + 1);
+      }
+    }
+    
+    // If 1+ workers already approved for a week in same department, it's at limit
+    for (const [week, count] of weekCountsByDept.entries()) {
+      if (count >= 1) { // Department limit is 1 worker per week
+        departmentLimitWeeks.push(week);
+      }
+    }
+  }
   
   // Submit vacation request mutation
   const submitRequest = useMutation({
     mutationFn: async (data: {
-      firstChoiceWeeks: string[];
-      secondChoiceWeeks: string[];
+      prioritizedWeeks: string[];
     }) => {
       if (!workerId) throw new Error("Worker ID not found");
       
       const response = await apiRequest('POST', '/api/vacation-requests', {
         workerId,
         year: 2026,
-        ...data,
+        prioritizedWeeks: data.prioritizedWeeks,
         status: 'pending',
         allocatedChoice: null
       });
@@ -163,10 +206,11 @@ export default function WorkerApp() {
             <VacationRequestForm 
               availableWeeks={weeksEntitled}
               isSubmitting={submitRequest.isPending}
-              onSubmit={(firstWeeks, secondWeeks) => {
+              conflictingWeeks={conflictingWeeks}
+              departmentLimitWeeks={departmentLimitWeeks}
+              onSubmit={(prioritizedWeeks) => {
                 submitRequest.mutate({
-                  firstChoiceWeeks: firstWeeks.map(w => format(w, 'yyyy-MM-dd')),
-                  secondChoiceWeeks: secondWeeks.map(w => format(w, 'yyyy-MM-dd')),
+                  prioritizedWeeks: prioritizedWeeks.map(w => format(w, 'yyyy-MM-dd')),
                 });
               }}
             />
@@ -185,9 +229,10 @@ export default function WorkerApp() {
                 : undefined as any,
               weeks: [],
               status: req.status === 'approved' 
-                ? (req.allocatedChoice === 'first' ? 'awarded_first' : 'awarded_second')
+                ? 'approved'
                 : req.status as any,
               submittedDate: new Date(req.submittedAt),
+              prioritizedWeeks: req.prioritizedWeeks,
               firstChoiceWeeks: req.firstChoiceWeeks,
               secondChoiceWeeks: req.secondChoiceWeeks,
               approvedWeeks: req.approvedWeeks,

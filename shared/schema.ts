@@ -17,9 +17,13 @@ export const vacationRequests = pgTable("vacation_requests", {
   workerId: varchar("worker_id").notNull().references(() => workers.id, { onDelete: "cascade" }),
   year: integer("year").notNull().default(2026),
   
-  // Each choice is an array of week start dates (Monday of each week)
-  firstChoiceWeeks: text("first_choice_weeks").array().notNull(),
-  secondChoiceWeeks: text("second_choice_weeks").array().notNull(),
+  // Priority-based weeks: ordered array of week start dates (Monday of each week)
+  // Priority 0 = highest priority, Priority N = lowest priority
+  prioritizedWeeks: text("prioritized_weeks").array(),
+  
+  // Legacy fields (kept for backward compatibility during migration)
+  firstChoiceWeeks: text("first_choice_weeks").array(),
+  secondChoiceWeeks: text("second_choice_weeks").array(),
   
   // Individual week approvals - array of approved week dates
   approvedWeeks: text("approved_weeks").array().notNull().default(sql`ARRAY[]::text[]`),
@@ -39,9 +43,23 @@ export const insertVacationRequestSchema = createInsertSchema(vacationRequests).
   id: true,
   submittedAt: true,
 }).extend({
-  firstChoiceWeeks: z.array(z.string()).min(1, "First choice must have at least one week"),
-  secondChoiceWeeks: z.array(z.string()).min(1, "Second choice must have at least one week"),
-});
+  // New priority-based validation
+  prioritizedWeeks: z.array(z.string()).min(1, "Prioritized weeks must have at least one week").optional(),
+  // Legacy validation (kept for backward compatibility)
+  firstChoiceWeeks: z.array(z.string()).min(1, "First choice must have at least one week").optional(),
+  secondChoiceWeeks: z.array(z.string()).min(1, "Second choice must have at least one week").optional(),
+}).refine(
+  (data) => {
+    // Must have either prioritizedWeeks OR (firstChoiceWeeks AND secondChoiceWeeks)
+    const hasPrioritized = data.prioritizedWeeks && data.prioritizedWeeks.length > 0;
+    const hasLegacy = data.firstChoiceWeeks && data.firstChoiceWeeks.length > 0 && 
+                     data.secondChoiceWeeks && data.secondChoiceWeeks.length > 0;
+    return hasPrioritized || hasLegacy;
+  },
+  {
+    message: "Must provide either prioritizedWeeks or both firstChoiceWeeks and secondChoiceWeeks",
+  }
+);
 
 export type InsertWorker = z.infer<typeof insertWorkerSchema>;
 export type Worker = typeof workers.$inferSelect;

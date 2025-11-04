@@ -2,39 +2,34 @@ import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
-import MultiWeekPicker from "./MultiWeekPicker";
+import PriorityWeeksPicker from "./PriorityWeeksPicker";
 
 interface VacationRequestFormProps {
   availableWeeks: number;
   isSubmitting?: boolean;
-  onSubmit?: (firstChoiceWeeks: Date[], secondChoiceWeeks: Date[]) => void;
+  onSubmit?: (prioritizedWeeks: Date[]) => void;
+  conflictingWeeks?: string[]; // Weeks with senior worker conflicts
+  departmentLimitWeeks?: string[]; // Weeks where department limit reached
 }
 
-export default function VacationRequestForm({ availableWeeks, isSubmitting = false, onSubmit }: VacationRequestFormProps) {
-  const [firstChoiceWeeks, setFirstChoiceWeeks] = useState<Date[]>([]);
-  const [secondChoiceWeeks, setSecondChoiceWeeks] = useState<Date[]>([]);
-  
-  // Debug logging
-  console.log('=== VacationRequestForm State ===');
-  console.log('First Choice Weeks:', firstChoiceWeeks.map(w => format(w, 'yyyy-MM-dd')));
-  console.log('Second Choice Weeks:', secondChoiceWeeks.map(w => format(w, 'yyyy-MM-dd')));
+export default function VacationRequestForm({ 
+  availableWeeks, 
+  isSubmitting = false, 
+  onSubmit,
+  conflictingWeeks = [],
+  departmentLimitWeeks = []
+}: VacationRequestFormProps) {
+  const requiredWeeks = availableWeeks * 2; // Must select exactly 2× entitlement
+  const [prioritizedWeeks, setPrioritizedWeeks] = useState<Date[]>([]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (firstChoiceWeeks.length === 0 || secondChoiceWeeks.length === 0) return;
+    if (prioritizedWeeks.length !== requiredWeeks) return;
     
-    console.log('Submitting vacation request:', {
-      firstChoice: firstChoiceWeeks.map(w => format(w, 'yyyy-MM-dd')),
-      secondChoice: secondChoiceWeeks.map(w => format(w, 'yyyy-MM-dd'))
-    });
-    
-    onSubmit?.(firstChoiceWeeks, secondChoiceWeeks);
+    onSubmit?.(prioritizedWeeks);
   };
 
-  const isFormValid = firstChoiceWeeks.length > 0 && 
-                      secondChoiceWeeks.length > 0 &&
-                      firstChoiceWeeks.length <= availableWeeks &&
-                      secondChoiceWeeks.length <= availableWeeks;
+  const isFormValid = prioritizedWeeks.length === requiredWeeks;
 
   return (
     <form onSubmit={handleSubmit}>
@@ -42,7 +37,7 @@ export default function VacationRequestForm({ availableWeeks, isSubmitting = fal
         <CardHeader>
           <CardTitle>Submit Vacation Request</CardTitle>
           <CardDescription>
-            Select up to {availableWeeks} separate weeks for each choice.
+            Select exactly {requiredWeeks} priority weeks in order of preference (most preferred first).
             {availableWeeks === 0 ? (
               <span className="text-destructive font-medium block mt-2">
                 You need at least 1 year of service to be eligible for vacation.
@@ -50,32 +45,20 @@ export default function VacationRequestForm({ availableWeeks, isSubmitting = fal
             ) : (
               <span className="font-medium block mt-2">
                 You are entitled to {availableWeeks} {availableWeeks === 1 ? 'week' : 'weeks'} based on your seniority.
+                You must select {requiredWeeks} priority weeks (2× your entitlement).
               </span>
             )}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* First Choice */}
-          <div className="space-y-4">
-            <MultiWeekPicker
-              selectedWeeks={firstChoiceWeeks}
-              onWeeksChange={setFirstChoiceWeeks}
-              maxWeeks={availableWeeks}
-              label="First Choice"
-              disabled={availableWeeks === 0}
-            />
-          </div>
-
-          {/* Second Choice */}
-          <div className="space-y-4">
-            <MultiWeekPicker
-              selectedWeeks={secondChoiceWeeks}
-              onWeeksChange={setSecondChoiceWeeks}
-              maxWeeks={availableWeeks}
-              label="Second Choice"
-              disabled={availableWeeks === 0}
-            />
-          </div>
+          <PriorityWeeksPicker
+            selectedWeeks={prioritizedWeeks}
+            onWeeksChange={setPrioritizedWeeks}
+            maxWeeks={requiredWeeks}
+            disabled={availableWeeks === 0 || isSubmitting}
+            conflictingWeeks={conflictingWeeks}
+            departmentLimitWeeks={departmentLimitWeeks}
+          />
 
           <Button 
             type="submit" 
@@ -83,7 +66,7 @@ export default function VacationRequestForm({ availableWeeks, isSubmitting = fal
             disabled={!isFormValid || availableWeeks === 0 || isSubmitting}
             data-testid="button-submit-request"
           >
-            {isSubmitting ? 'Submitting...' : 'Submit Vacation Request'}
+            {isSubmitting ? 'Submitting...' : `Submit Vacation Request (${prioritizedWeeks.length}/${requiredWeeks} weeks)`}
           </Button>
         </CardContent>
       </Card>

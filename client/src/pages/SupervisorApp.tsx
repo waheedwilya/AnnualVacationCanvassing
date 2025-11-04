@@ -240,8 +240,8 @@ export default function SupervisorApp() {
   const approved = filteredRequests.filter(r => r.displayStatus === 'approved');
   const allFiltered = filteredRequests;
 
-  // Transform pending requests into choice-grouped table rows
-  type ChoiceTableRow = {
+  // Group requests by department and prepare priority weeks data
+  type PriorityRequestRow = {
     requestId: string;
     workerId: string;
     workerName: string;
@@ -249,22 +249,47 @@ export default function SupervisorApp() {
     yearsOfService: number;
     entitlement: number;
     department: string;
-    weeks: string[];
+    prioritizedWeeks: string[];
     approvedWeeks: string[];
     deniedWeeks: string[];
+    conflictingWeeks: Set<string>; // Weeks that conflict with other workers in same department
   };
 
-  const createChoiceRows = (choiceType: 'first' | 'second'): ChoiceTableRow[] => {
-    return pending
+  // Get all weeks for a request (prioritized or legacy)
+  const getRequestWeeks = (req: VacationRequest): string[] => {
+    if (req.prioritizedWeeks && req.prioritizedWeeks.length > 0) {
+      return req.prioritizedWeeks;
+    }
+    return [...(req.firstChoiceWeeks || []), ...(req.secondChoiceWeeks || [])];
+  };
+
+  // Create request rows with priority weeks
+  const createPriorityRows = (requests: VacationRequest[]): PriorityRequestRow[] => {
+    return requests
       .map(req => {
         const worker = workerMap.get(req.workerId);
         if (!worker) return null;
 
-        const weeks = choiceType === 'first' ? req.firstChoiceWeeks : req.secondChoiceWeeks;
-        if (!weeks || weeks.length === 0) return null;
+        const prioritizedWeeks = getRequestWeeks(req);
+        if (prioritizedWeeks.length === 0) return null;
 
         const yearsOfService = differenceInYears(new Date(), new Date(worker.joiningDate));
         const entitlement = calculateVacationWeeks(worker.joiningDate);
+
+        // Find conflicting weeks (weeks that appear in other workers' requests in same department)
+        const conflictingWeeks = new Set<string>();
+        for (const otherReq of requests) {
+          if (otherReq.id === req.id) continue;
+          const otherWorker = workerMap.get(otherReq.workerId);
+          if (!otherWorker || otherWorker.department !== worker.department) continue;
+          
+          const otherWeeks = getRequestWeeks(otherReq);
+          for (const week of prioritizedWeeks) {
+            if (otherWeeks.includes(week)) {
+              conflictingWeeks.add(week);
+            }
+          }
+        }
 
         return {
           requestId: req.id,
@@ -274,17 +299,29 @@ export default function SupervisorApp() {
           yearsOfService,
           entitlement,
           department: worker.department,
-          weeks,
+          prioritizedWeeks,
           approvedWeeks: req.approvedWeeks || [],
           deniedWeeks: req.deniedWeeks || [],
+          conflictingWeeks,
         };
       })
-      .filter((row): row is ChoiceTableRow => row !== null)
+      .filter((row): row is PriorityRequestRow => row !== null)
       .sort((a, b) => a.joiningDate.getTime() - b.joiningDate.getTime()); // Sort by seniority
   };
 
-  const firstChoiceRows = createChoiceRows('first');
-  const secondChoiceRows = createChoiceRows('second');
+  // Group rows by department
+  const priorityRows = createPriorityRows(pending);
+  const rowsByDepartment = new Map<string, PriorityRequestRow[]>();
+  
+  for (const row of priorityRows) {
+    if (!rowsByDepartment.has(row.department)) {
+      rowsByDepartment.set(row.department, []);
+    }
+    rowsByDepartment.get(row.department)!.push(row);
+  }
+  
+  // Sort departments alphabetically
+  const departments = Array.from(rowsByDepartment.keys()).sort();
 
   // Convert vacation requests to the format expected by RequestCard
   const convertToCardFormat = (requests: VacationRequest[]) => {
@@ -315,6 +352,7 @@ export default function SupervisorApp() {
         status: displayStatus,
         hasConflict: false, // We'll add this later if needed
         conflictDetails: undefined,
+        prioritizedWeeks: req.prioritizedWeeks,
         firstChoiceWeeks: req.firstChoiceWeeks,
         secondChoiceWeeks: req.secondChoiceWeeks,
         allocatedChoice: req.allocatedChoice,
@@ -390,30 +428,38 @@ export default function SupervisorApp() {
               <p className="text-center text-muted-foreground py-12">No pending requests</p>
             ) : (
               <>
-                {/* First Choice Table */}
-                <div className="space-y-4">
-                  <h2 className="text-xl font-semibold text-foreground">First Choice Requests</h2>
-                  {firstChoiceRows.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No first choice requests</p>
-                  ) : (
-                    <div className="border rounded-md">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Worker</TableHead>
-                            <TableHead>Seniority</TableHead>
-                            <TableHead>Entitlement</TableHead>
-                            <TableHead>Requested Weeks</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {firstChoiceRows.map((row) => {
+                {/* Grouped by Department */}
+                {departments.map((dept) => {
+                  const deptRows = rowsByDepartment.get(dept) || [];
+                  if (deptRows.length === 0) return null;
+                  
+                  return (
+                    <div key={dept} className="space-y-4">
+                      <div className="bg-primary/10 border-l-4 border-primary px-4 py-2 rounded">
+                        <h2 className="text-xl font-semibold text-foreground">{dept} Department</h2>
+                        <p className="text-sm text-muted-foreground">{deptRows.length} request{deptRows.length !== 1 ? 's' : ''}</p>
+                      </div>
+                      <div className="border rounded-md">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Worker</TableHead>
+                              <TableHead>Seniority</TableHead>
+                              <TableHead>Entitlement</TableHead>
+                              <TableHead>Priority Weeks (in order)</TableHead>
+                              <TableHead>Status</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {deptRows.map((row) => {
                             const changes = weekChanges.get(row.requestId);
                             const hasChanges = changes && (changes.approvedWeeks.size > 0 || changes.deniedWeeks.size > 0);
                             
+                            const approvedCount = row.approvedWeeks.length + (changes?.approvedWeeks.size || 0);
+                            const totalWeeks = row.prioritizedWeeks.length;
+                            
                             return (
-                              <TableRow key={`${row.requestId}-first`} data-testid={`row-first-choice-${row.requestId}`}>
+                              <TableRow key={row.requestId} data-testid={`row-priority-${row.requestId}`}>
                                 <TableCell className="font-medium">
                                   <div>
                                     <div className="text-foreground">{row.workerName}</div>
@@ -433,17 +479,35 @@ export default function SupervisorApp() {
                                 </TableCell>
                                 <TableCell>
                                   <div className="flex flex-wrap gap-2">
-                                    {row.weeks.map((week) => {
+                                    {row.prioritizedWeeks.map((week, priorityIndex) => {
                                       const weekDate = parse(week, 'yyyy-MM-dd', new Date());
                                       const isApproved = row.approvedWeeks.includes(week) || changes?.approvedWeeks.has(week);
                                       const isDenied = row.deniedWeeks.includes(week) || changes?.deniedWeeks.has(week);
                                       const isChanged = changes?.approvedWeeks.has(week) || changes?.deniedWeeks.has(week);
+                                      const isConflict = row.conflictingWeeks.has(week);
                                       
                                       return (
-                                        <div key={week} className="flex items-center gap-1">
+                                        <div 
+                                          key={week} 
+                                          className={`flex items-center gap-1.5 p-1.5 rounded border ${
+                                            isConflict 
+                                              ? 'border-yellow-500 bg-yellow-50' 
+                                              : isApproved 
+                                                ? 'border-green-500 bg-green-50' 
+                                                : isDenied 
+                                                  ? 'border-red-500 bg-red-50' 
+                                                  : 'border-border bg-card'
+                                          }`}
+                                        >
+                                          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+                                            {priorityIndex + 1}
+                                          </span>
                                           <span className="text-sm text-foreground">
                                             {format(weekDate, 'MMM d')}
                                           </span>
+                                          {isConflict && (
+                                            <span className="text-xs text-yellow-700 font-medium">⚠</span>
+                                          )}
                                           {isApproved && (
                                             <div className="flex items-center gap-1">
                                               <Badge className="bg-success text-success-foreground">
@@ -509,9 +573,12 @@ export default function SupervisorApp() {
                                     })}
                                   </div>
                                 </TableCell>
-                                <TableCell className="text-right">
+                                <TableCell>
+                                  <Badge variant={approvedCount > 0 ? "default" : "secondary"}>
+                                    {approvedCount}/{row.entitlement} Approved
+                                  </Badge>
                                   {hasChanges && (
-                                    <div className="flex gap-2 justify-end">
+                                    <div className="flex gap-2 mt-2">
                                       <Button
                                         size="sm"
                                         onClick={() => handleSaveWeekChanges(row.requestId)}
@@ -537,156 +604,19 @@ export default function SupervisorApp() {
                       </Table>
                     </div>
                   )}
-                </div>
-
-                {/* Second Choice Table */}
-                <div className="space-y-4">
-                  <h2 className="text-xl font-semibold text-foreground">Second Choice Requests</h2>
-                  {secondChoiceRows.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No second choice requests</p>
-                  ) : (
-                    <div className="border rounded-md">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Worker</TableHead>
-                            <TableHead>Seniority</TableHead>
-                            <TableHead>Entitlement</TableHead>
-                            <TableHead>Requested Weeks</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {secondChoiceRows.map((row) => {
-                            const changes = weekChanges.get(row.requestId);
-                            const hasChanges = changes && (changes.approvedWeeks.size > 0 || changes.deniedWeeks.size > 0);
-                            
-                            return (
-                              <TableRow key={`${row.requestId}-second`} data-testid={`row-second-choice-${row.requestId}`}>
-                                <TableCell className="font-medium">
-                                  <div>
-                                    <div className="text-foreground">{row.workerName}</div>
-                                    <div className="text-sm text-muted-foreground">{row.department}</div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="text-sm">
-                                    <div>{row.yearsOfService} years</div>
-                                    <div className="text-muted-foreground">
-                                      {format(row.joiningDate, 'MMM yyyy')}
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge variant="outline">{row.entitlement} weeks</Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex flex-wrap gap-2">
-                                    {row.weeks.map((week) => {
-                                      const weekDate = parse(week, 'yyyy-MM-dd', new Date());
-                                      const isApproved = row.approvedWeeks.includes(week) || changes?.approvedWeeks.has(week);
-                                      const isDenied = row.deniedWeeks.includes(week) || changes?.deniedWeeks.has(week);
-                                      const isChanged = changes?.approvedWeeks.has(week) || changes?.deniedWeeks.has(week);
-                                      
-                                      return (
-                                        <div key={week} className="flex items-center gap-1">
-                                          <span className="text-sm text-foreground">
-                                            {format(weekDate, 'MMM d')}
-                                          </span>
-                                          {isApproved && (
-                                            <div className="flex items-center gap-1">
-                                              <Badge className="bg-success text-success-foreground">
-                                                <Check className="w-3 h-3" />
-                                              </Badge>
-                                              {!isChanged && (
-                                                <Button
-                                                  size="icon"
-                                                  variant="ghost"
-                                                  className="h-5 w-5"
-                                                  onClick={() => handleRevertWeek(row.requestId, week)}
-                                                  data-testid={`button-revert-${week}`}
-                                                  title="Revert approval"
-                                                >
-                                                  <X className="w-3 h-3" />
-                                                </Button>
-                                              )}
-                                            </div>
-                                          )}
-                                          {isDenied && (
-                                            <div className="flex items-center gap-1">
-                                              <Badge className="bg-destructive text-destructive-foreground">
-                                                <X className="w-3 h-3" />
-                                              </Badge>
-                                              {!isChanged && (
-                                                <Button
-                                                  size="icon"
-                                                  variant="ghost"
-                                                  className="h-5 w-5"
-                                                  onClick={() => handleRevertWeek(row.requestId, week)}
-                                                  data-testid={`button-revert-${week}`}
-                                                  title="Revert denial"
-                                                >
-                                                  <X className="w-3 h-3" />
-                                                </Button>
-                                              )}
-                                            </div>
-                                          )}
-                                          {!isApproved && !isDenied && (
-                                            <div className="flex gap-1">
-                                              <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="h-6 w-6"
-                                                onClick={() => dispatchWeekChange({ type: 'APPROVE', requestId: row.requestId, week })}
-                                                data-testid={`button-approve-${week}`}
-                                              >
-                                                <Check className="w-3 h-3 text-success" />
-                                              </Button>
-                                              <Button
-                                                size="icon"
-                                                variant="ghost"
-                                                className="h-6 w-6"
-                                                onClick={() => dispatchWeekChange({ type: 'DENY', requestId: row.requestId, week })}
-                                                data-testid={`button-deny-${week}`}
-                                              >
-                                                <X className="w-3 h-3 text-destructive" />
-                                              </Button>
-                                            </div>
-                                          )}
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {hasChanges && (
-                                    <div className="flex gap-2 justify-end">
-                                      <Button
-                                        size="sm"
-                                        onClick={() => handleSaveWeekChanges(row.requestId)}
-                                        data-testid={`button-save-${row.requestId}`}
-                                      >
-                                        Save
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleDiscardChanges(row.requestId)}
-                                        data-testid={`button-discard-${row.requestId}`}
-                                      >
-                                        Discard
-                                      </Button>
-                                    </div>
-                                  )}
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
+                  
+                  {/* Conflict warning for department */}
+                  {deptRows.some(row => row.conflictingWeeks.size > 0) && (
+                    <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 rounded">
+                      <p className="text-sm text-yellow-800">
+                        <strong>⚠ Conflicts detected:</strong> Some weeks are requested by multiple workers in {dept}. 
+                        Higher seniority workers will be prioritized during auto-allocation.
+                      </p>
                     </div>
                   )}
                 </div>
+              );
+                })}
               </>
             )}
           </TabsContent>

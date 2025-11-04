@@ -5,10 +5,11 @@ import { format, addDays } from "date-fns";
 
 interface VacationRequest {
   id: string;
-  choice: 'first' | 'second';
+  choice?: 'first' | 'second';
   weeks: number[];
   status: RequestStatus;
   submittedDate: Date;
+  prioritizedWeeks?: string[];
   firstChoiceWeeks?: string[];
   secondChoiceWeeks?: string[];
   approvedWeeks?: string[];
@@ -20,7 +21,7 @@ interface MyRequestsListProps {
   conflictingWeeks?: string[];
 }
 
-function WeeksList({ 
+function PriorityWeeksList({ 
   weeks, 
   approvedWeeks = [], 
   deniedWeeks = [],
@@ -37,7 +38,7 @@ function WeeksList({
   
   return (
     <div className="flex flex-wrap gap-2">
-      {weeks.map((weekStart, idx) => {
+      {weeks.map((weekStart, priorityIndex) => {
         const start = new Date(weekStart);
         const end = addDays(start, 6); // Monday to Sunday
         const isApproved = approvedSet.has(weekStart);
@@ -45,23 +46,31 @@ function WeeksList({
         const isConflicting = conflictSet.has(weekStart);
         
         return (
-          <span 
-            key={idx}
-            className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
+          <div
+            key={weekStart}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md border ${
               isApproved
-                ? 'bg-success/10 text-success' 
+                ? 'bg-success/10 text-success border-success/30' 
                 : isDenied
-                ? 'bg-destructive/10 text-destructive'
+                ? 'bg-destructive/10 text-destructive border-destructive/30'
                 : isConflicting
-                ? 'bg-warning/20 text-warning border border-warning/40'
-                : 'bg-primary/10 text-primary'
+                ? 'bg-warning/20 text-warning border-warning/40'
+                : 'bg-primary/10 text-primary border-primary/30'
             }`}
             data-testid={`week-${weekStart}`}
           >
-            {format(start, 'MMM d')} - {format(end, 'MMM d')}
-            {isApproved && <Check className="h-3 w-3 ml-2" />}
-            {isDenied && <X className="h-3 w-3 ml-2" />}
-          </span>
+            <span className="flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs font-semibold">
+              {priorityIndex + 1}
+            </span>
+            <span className="text-sm font-medium">
+              {format(start, 'MMM d')} - {format(end, 'MMM d')}
+            </span>
+            {isApproved && <Check className="h-3 w-3 text-success" />}
+            {isDenied && <X className="h-3 w-3 text-destructive" />}
+            {isConflicting && !isApproved && !isDenied && (
+              <span className="text-xs text-warning font-medium">⚠</span>
+            )}
+          </div>
         );
       })}
     </div>
@@ -105,7 +114,10 @@ export default function MyRequestsList({ requests, conflictingWeeks = [] }: MyRe
       )}
       
       {requests.map((request) => {
-        const showWeeks = request.firstChoiceWeeks && request.secondChoiceWeeks;
+        // Get weeks (prioritized or legacy)
+        const prioritizedWeeks = request.prioritizedWeeks || 
+          [...(request.firstChoiceWeeks || []), ...(request.secondChoiceWeeks || [])];
+        const showWeeks = prioritizedWeeks.length > 0;
         
         return (
           <Card key={request.id} data-testid={`request-item-${request.id}`}>
@@ -120,21 +132,10 @@ export default function MyRequestsList({ requests, conflictingWeeks = [] }: MyRe
                 <>
                   <div>
                     <p className="text-sm font-medium text-foreground mb-2">
-                      First Choice ({request.firstChoiceWeeks!.length} {request.firstChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
+                      Your Priority Weeks (in order of preference):
                     </p>
-                    <WeeksList 
-                      weeks={request.firstChoiceWeeks!} 
-                      approvedWeeks={request.approvedWeeks}
-                      deniedWeeks={request.deniedWeeks}
-                      conflictingWeeks={conflictingWeeks}
-                    />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground mb-2">
-                      Second Choice ({request.secondChoiceWeeks!.length} {request.secondChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
-                    </p>
-                    <WeeksList 
-                      weeks={request.secondChoiceWeeks!} 
+                    <PriorityWeeksList 
+                      weeks={prioritizedWeeks} 
                       approvedWeeks={request.approvedWeeks}
                       deniedWeeks={request.deniedWeeks}
                       conflictingWeeks={conflictingWeeks}
