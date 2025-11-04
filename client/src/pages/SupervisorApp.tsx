@@ -320,8 +320,8 @@ export default function SupervisorApp() {
     rowsByDepartment.get(row.department)!.push(row);
   }
   
-  // Sort departments alphabetically
-  const departments = Array.from(rowsByDepartment.keys()).sort();
+  // Sort pending departments alphabetically
+  const pendingDepartments = Array.from(rowsByDepartment.keys()).sort();
 
   // Convert vacation requests to the format expected by RequestCard
   const convertToCardFormat = (requests: VacationRequest[]) => {
@@ -429,7 +429,7 @@ export default function SupervisorApp() {
             ) : (
               <>
                 {/* Grouped by Department */}
-                {departments.map((dept) => {
+                {pendingDepartments.map((dept) => {
                   const deptRows = rowsByDepartment.get(dept) || [];
                   if (deptRows.length === 0) return null;
                   
@@ -603,7 +603,6 @@ export default function SupervisorApp() {
                         </TableBody>
                       </Table>
                     </div>
-                  )}
                   
                   {/* Conflict warning for department */}
                   {deptRows.some(row => row.conflictingWeeks.size > 0) && (
@@ -615,7 +614,7 @@ export default function SupervisorApp() {
                     </div>
                   )}
                 </div>
-              );
+                  );
                 })}
               </>
             )}
