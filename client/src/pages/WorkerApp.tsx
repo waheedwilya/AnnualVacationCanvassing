@@ -126,7 +126,7 @@ export default function WorkerApp() {
       {/* Header with logout button */}
       <header className="border-b bg-card px-6 py-3 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold text-foreground">Worker Portal</h1>
+          <h1 className="text-lg font-semibold text-foreground">Annual Vacation Canvassing</h1>
           <p className="text-sm text-muted-foreground">{currentWorker.name}</p>
         </div>
         <div className="flex gap-2">
