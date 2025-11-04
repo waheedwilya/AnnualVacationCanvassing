@@ -18,8 +18,13 @@ function calculateWeeks(startDate: string, endDate: string): number {
 
 // Helper function to validate date is in 2026
 function isDateIn2026(dateStr: string): boolean {
-  const date = new Date(dateStr);
-  return date.getFullYear() === 2026;
+  if (!dateStr || typeof dateStr !== 'string') return false;
+  // Parse date string (format: YYYY-MM-DD)
+  // Use UTC to avoid timezone issues
+  const dateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!dateMatch) return false;
+  const year = parseInt(dateMatch[1], 10);
+  return year === 2026;
 }
 
 // Helper function to check if two week arrays have any overlap
@@ -297,8 +302,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Handle new priority-based system
       if (validatedData.prioritizedWeeks && validatedData.prioritizedWeeks.length > 0) {
         // Validate all week dates are in 2026
-        if (!validatedData.prioritizedWeeks.every(isDateIn2026)) {
-          return res.status(400).json({ error: "All weeks must be in 2026" });
+        const invalidDates = validatedData.prioritizedWeeks.filter(date => !isDateIn2026(date));
+        if (invalidDates.length > 0) {
+          return res.status(400).json({ 
+            error: `All weeks must be in 2026. Invalid dates: ${invalidDates.join(', ')}` 
+          });
         }
         
         // Validate week count: must be between 1 and 2× entitlement
@@ -351,6 +359,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(201).json(request);
     } catch (error) {
       console.error('Error creating vacation request:', error);
+      if (error instanceof Error) {
+        // Return more specific error messages
+        if (error.name === 'ZodError') {
+          const zodError = error as any;
+          const errors = zodError.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ') || error.message;
+          return res.status(400).json({ error: `Validation error: ${errors}` });
+        }
+        return res.status(400).json({ error: error.message || "Invalid vacation request data" });
+      }
       res.status(400).json({ error: "Invalid vacation request data" });
     }
   });
