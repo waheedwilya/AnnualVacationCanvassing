@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worker - Priority Weeks Form Mockup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #1a1a1a;
+        }
+        .container { max-width: 900px; margin: 0 auto; }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 { font-size: 24px; margin-bottom: 8px; }
+        .description {
+            color: #666;
+            margin-bottom: 24px;
+            font-size: 14px;
+        }
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 12px;
+            margin-bottom: 24px;
+            border-radius: 4px;
+        }
+        .priority-list {
+            background: #f9fafb;
+            border: 2px dashed #d1d5db;
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 120px;
+            margin-bottom: 20px;
+        }
+        .priority-item {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: move;
+        }
+        .priority-item:hover { border-color: #3b82f6; }
+        .priority-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px;
+            height: 28px;
+            background: #3b82f6;
+            color: white;
+            border-radius: 50%;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 12px;
+        }
+        .priority-date {
+            flex: 1;
+            font-weight: 500;
+        }
+        .priority-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .btn:hover { background: #f3f4f6; }
+        .btn-danger {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .week-picker {
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+        .month-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .week-button {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 8px;
+            border: 1px solid #e5e7eb;
+            background: white;
+            border-radius: 6px;
+            text-align: left;
+            cursor: pointer;
+        }
+        .week-button:hover { background: #f9fafb; }
+        .week-button.selected {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .week-button.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .week-button.warning-yellow {
+            border: 2px solid #f59e0b;
+            background: #fef3c7;
+            position: relative;
+        }
+        .week-button.warning-yellow::before {
+            content: "⚠";
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            color: #f59e0b;
+            font-weight: bold;
+        }
+        .week-button.warning-red {
+            border: 2px solid #ef4444;
+            background: #fee2e2;
+            position: relative;
+            opacity: 0.8;
+        }
+        .week-button.warning-red::before {
+            content: "✗";
+            position: absolute;
+            top: 8px;
+            right: 12px;
+            color: #ef4444;
+            font-weight: bold;
+        }
+        .week-button.warning-red.disabled {
+            cursor: not-allowed;
+        }
+        .week-warning-text {
+            font-size: 11px;
+            margin-top: 4px;
+            font-weight: 500;
+        }
+        .warning-yellow .week-warning-text {
+            color: #92400e;
+        }
+        .warning-red .week-warning-text {
+            color: #991b1b;
+        }
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 24px;
+        }
+        .submit-btn:hover { background: #2563eb; }
+        .submit-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        .empty-state {
+            text-align: center;
+            color: #9ca3af;
+            padding: 40px;
+        }
+        .progress {
+            text-align: right;
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>New Vacation Request</h1>
+            <p class="description">
+                Select your priority weeks in order of preference. You must select exactly 10 weeks (2× your entitlement).
+            </p>
+            
+            <div class="info-box">
+                <strong>You are entitled to 5 weeks</strong> based on your seniority.<br>
+                Please select <strong>10 priority weeks</strong> in order of preference (most preferred first).
+            </div>
+
+            <div class="progress">
+                <strong>5 / 10 weeks selected</strong>
+            </div>
+
+            <!-- Priority List (Ordered) -->
+            <div class="priority-list">
+                <div class="priority-item">
+                    <span class="priority-number">1</span>
+                    <span class="priority-date">Jul 6 - Jul 12, 2026</span>
+                    <div class="priority-actions">
+                        <button class="btn">↑</button>
+                        <button class="btn">↓</button>
+                        <button class="btn btn-danger">×</button>
+                    </div>
+                </div>
+                <div class="priority-item">
+                    <span class="priority-number">2</span>
+                    <span class="priority-date">Jul 13 - Jul 19, 2026</span>
+                    <div class="priority-actions">
+                        <button class="btn">↑</button>
+                        <button class="btn">↓</button>
+                        <button class="btn btn-danger">×</button>
+                    </div>
+                </div>
+                <div class="priority-item">
+                    <span class="priority-number">3</span>
+                    <span class="priority-date">Jul 20 - Jul 26, 2026</span>
+                    <div class="priority-actions">
+                        <button class="btn">↑</button>
+                        <button class="btn">↓</button>
+                        <button class="btn btn-danger">×</button>
+                    </div>
+                </div>
+                <div class="priority-item">
+                    <span class="priority-number">4</span>
+                    <span class="priority-date">Aug 3 - Aug 9, 2026</span>
+                    <div class="priority-actions">
+                        <button class="btn">↑</button>
+                        <button class="btn">↓</button>
+                        <button class="btn btn-danger">×</button>
+                    </div>
+                </div>
+                <div class="priority-item">
+                    <span class="priority-number">5</span>
+                    <span class="priority-date">Aug 10 - Aug 16, 2026</span>
+                    <div class="priority-actions">
+                        <button class="btn">↑</button>
+                        <button class="btn">↓</button>
+                        <button class="btn btn-danger">×</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Week Picker -->
+            <div class="week-picker">
+                <div class="month-header">
+                    <button class="btn">←</button>
+                    <h3>July 2026</h3>
+                    <button class="btn">→</button>
+                </div>
+                <button class="week-button selected">
+                    <div>Week: Jul 6 - Jul 12, 2026</div>
+                </button>
+                <button class="week-button selected">
+                    <div>Week: Jul 13 - Jul 19, 2026</div>
+                </button>
+                <button class="week-button selected">
+                    <div>Week: Jul 20 - Jul 26, 2026</div>
+                </button>
+                <button class="week-button warning-yellow">
+                    <div>Week: Jul 27 - Aug 2, 2026</div>
+                    <div class="week-warning-text">⚠ Senior worker requested (may be denied)</div>
+                </button>
+                <button class="week-button warning-red disabled">
+                    <div>Week: Aug 3 - Aug 9, 2026</div>
+                    <div class="week-warning-text">✗ Department limit reached</div>
+                </button>
+                <button class="week-button">
+                    <div>Week: Aug 10 - Aug 16, 2026</div>
+                </button>
+                <button class="week-button warning-yellow">
+                    <div>Week: Aug 17 - Aug 23, 2026</div>
+                    <div class="week-warning-text">⚠ Senior worker requested (may be denied)</div>
+                </button>
+            </div>
+
+            <button class="submit-btn" disabled>Select 5 more weeks to submit</button>
+        </div>
+
+        <div class="card" style="background: #f0fdf4; border-left: 4px solid #22c55e;">
+            <h2 style="font-size: 18px; margin-bottom: 12px;">How it works:</h2>
+            <ul style="list-style: none; padding-left: 0;">
+                <li style="margin-bottom: 8px;">✓ Select weeks from the calendar below</li>
+                <li style="margin-bottom: 8px;">✓ Reorder by clicking ↑ or ↓ buttons</li>
+                <li style="margin-bottom: 8px;">✓ Weeks are allocated by seniority and department capacity</li>
+                <li style="margin-bottom: 8px;">✓ Your top priority weeks will be considered first</li>
+            </ul>
+        </div>
+        
+        <div class="card" style="background: #fef3c7; border-left: 4px solid #f59e0b;">
+            <h2 style="font-size: 18px; margin-bottom: 12px;">Warning Colors:</h2>
+            <ul style="list-style: none; padding-left: 0;">
+                <li style="margin-bottom: 8px;">⚠ <strong>Yellow warning:</strong> A senior worker has requested this week, but department limit not reached. You can still select it, but it may be denied during allocation.</li>
+                <li style="margin-bottom: 8px;">✗ <strong>Red warning:</strong> Department limit reached for this week. You cannot select it.</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supervisor - Priority Weeks View Mockup</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+            color: #1a1a1a;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 20px 24px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        h1 { font-size: 24px; margin-bottom: 4px; }
+        .subtitle { color: #666; font-size: 14px; }
+        .stats {
+            display: flex;
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .stat-card {
+            background: #f9fafb;
+            padding: 12px 16px;
+            border-radius: 6px;
+            flex: 1;
+        }
+        .stat-label { font-size: 12px; color: #666; }
+        .stat-value { font-size: 20px; font-weight: 600; margin-top: 4px; }
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        thead {
+            background: #f9fafb;
+            border-bottom: 2px solid #e5e7eb;
+        }
+        th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+            color: #374151;
+        }
+        td {
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .worker-name { font-weight: 600; }
+        .worker-dept { font-size: 12px; color: #666; margin-top: 4px; }
+        .priority-weeks {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .priority-week {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border: 1px solid #e5e7eb;
+            border-radius: 4px;
+            background: white;
+            font-size: 13px;
+            position: relative;
+        }
+        .week-actions {
+            display: flex;
+            gap: 4px;
+            margin-left: auto;
+        }
+        .week-btn {
+            width: 20px;
+            height: 20px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: bold;
+            padding: 0;
+        }
+        .week-btn-approve {
+            background: #22c55e;
+            color: white;
+        }
+        .week-btn-approve:hover {
+            background: #16a34a;
+        }
+        .week-btn-deny {
+            background: #ef4444;
+            color: white;
+        }
+        .week-btn-deny:hover {
+            background: #dc2626;
+        }
+        .week-btn-revert {
+            background: #6b7280;
+            color: white;
+        }
+        .week-btn-revert:hover {
+            background: #4b5563;
+        }
+        .priority-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+            background: #6b7280;
+            color: white;
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .priority-week.approved {
+            border-color: #22c55e;
+            background: #f0fdf4;
+        }
+        .priority-week.approved .priority-number {
+            background: #22c55e;
+        }
+        .priority-week.denied {
+            border-color: #ef4444;
+            background: #fef2f2;
+            opacity: 0.7;
+        }
+        .priority-week.denied .priority-number {
+            background: #ef4444;
+        }
+        .priority-week.conflict {
+            border-color: #f59e0b;
+            background: #fef3c7;
+            border-width: 2px;
+            position: relative;
+        }
+        .priority-week.conflict .priority-number {
+            background: #f59e0b;
+        }
+        .priority-week.conflict::after {
+            content: "⚠";
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .department-section {
+            margin-bottom: 32px;
+        }
+        .department-header {
+            background: #6366f1;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .department-count {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .department-table {
+            border-top: none;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-success {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn:hover { background: #f3f4f6; }
+        .btn-success {
+            border-color: #22c55e;
+            color: #22c55e;
+        }
+        .btn-danger {
+            border-color: #ef4444;
+            color: #ef4444;
+        }
+        .legend {
+            background: white;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .legend-items {
+            display: flex;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+        }
+        .action-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .action-btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .action-btn-primary:hover {
+            background: #2563eb;
+        }
+        .action-btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        .action-btn-secondary:hover {
+            background: #4b5563;
+        }
+        .action-btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        .action-btn-danger:hover {
+            background: #dc2626;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Supervisor Portal</h1>
+            <p class="subtitle">Manage vacation requests for 2026</p>
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Total Requests</div>
+                    <div class="stat-value">12</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Pending</div>
+                    <div class="stat-value">8</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Approved</div>
+                    <div class="stat-value">4</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Conflicts</div>
+                    <div class="stat-value">3</div>
+                </div>
+            </div>
+            <div class="action-buttons">
+                <button class="action-btn action-btn-primary">Auto-Allocate All Requests</button>
+                <button class="action-btn action-btn-danger">Reset All Approvals</button>
+            </div>
+        </div>
+
+        <div class="legend">
+            <div class="legend-items">
+                <div class="legend-item">
+                    <div class="priority-week">
+                        <span class="priority-number">1</span>
+                        <span>Week</span>
+                    </div>
+                    <span>Priority number</span>
+                </div>
+                <div class="legend-item">
+                    <div class="priority-week approved">
+                        <span class="priority-number">✓</span>
+                        <span>Approved</span>
+                    </div>
+                    <span>Approved week</span>
+                </div>
+                <div class="legend-item">
+                    <div class="priority-week denied">
+                        <span class="priority-number">✗</span>
+                        <span>Denied</span>
+                    </div>
+                    <span>Denied week</span>
+                </div>
+                <div class="legend-item">
+                    <div class="priority-week conflict">
+                        <span class="priority-number">⚠</span>
+                        <span>Conflict</span>
+                    </div>
+                    <span>Clashing week (same dept)</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Assembly Department -->
+        <div class="department-section">
+            <div class="department-header">
+                <span>Assembly Department</span>
+                <span class="department-count">2 requests</span>
+            </div>
+            <div class="table-container department-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Worker</th>
+                            <th>Seniority</th>
+                            <th>Entitlement</th>
+                            <th>Priority Weeks (in order)</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="worker-name">Linda Martinez</div>
+                                <div class="worker-dept">Assembly</div>
+                            </td>
+                            <td>6 years<br><small style="color: #666;">Nov 2019</small></td>
+                            <td><span class="badge badge-warning">5 weeks</span></td>
+                            <td>
+                                <div class="priority-weeks">
+                                    <div class="priority-week approved conflict">
+                                        <span class="priority-number">1</span>
+                                        <span>Jul 6</span>
+                                    </div>
+                                    <div class="priority-week approved conflict">
+                                        <span class="priority-number">2</span>
+                                        <span>Jul 13</span>
+                                    </div>
+                                    <div class="priority-week approved conflict">
+                                        <span class="priority-number">3</span>
+                                        <span>Jul 20</span>
+                                    </div>
+                                    <div class="priority-week approved">
+                                        <span class="priority-number">4</span>
+                                        <span>Jul 27</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-revert" title="Revert approval">×</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week approved">
+                                        <span class="priority-number">5</span>
+                                        <span>Aug 3</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-revert" title="Revert approval">×</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week denied">
+                                        <span class="priority-number">6</span>
+                                        <span>Aug 10</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-revert" title="Revert denial">×</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week denied">
+                                        <span class="priority-number">7</span>
+                                        <span>Aug 17</span>
+                                    </div>
+                                    <div class="priority-week denied">
+                                        <span class="priority-number">8</span>
+                                        <span>Aug 24</span>
+                                    </div>
+                                    <div class="priority-week denied">
+                                        <span class="priority-number">9</span>
+                                        <span>Sep 1</span>
+                                    </div>
+                                    <div class="priority-week denied">
+                                        <span class="priority-number">10</span>
+                                        <span>Sep 8</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge badge-success">5/5 Approved</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div class="worker-name">Maria Rodriguez</div>
+                                <div class="worker-dept">Assembly</div>
+                            </td>
+                            <td>5 years<br><small style="color: #666;">Apr 2020</small></td>
+                            <td><span class="badge badge-warning">5 weeks</span></td>
+                            <td>
+                                <div class="priority-weeks">
+                                    <div class="priority-week conflict">
+                                        <span class="priority-number">1</span>
+                                        <span>Jul 6</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week conflict">
+                                        <span class="priority-number">2</span>
+                                        <span>Jul 13</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week conflict">
+                                        <span class="priority-number">3</span>
+                                        <span>Jul 20</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week denied">
+                                        <span class="priority-number">4</span>
+                                        <span>Aug 3</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-revert" title="Revert denial">×</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week denied">
+                                        <span class="priority-number">5</span>
+                                        <span>Aug 10</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-revert" title="Revert denial">×</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">6</span>
+                                        <span>Aug 17</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">7</span>
+                                        <span>Aug 24</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">8</span>
+                                        <span>Sep 1</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">9</span>
+                                        <span>Sep 8</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">10</span>
+                                        <span>Sep 15</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge badge-warning">0/5 Pending</span>
+                            </td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn btn-success">✓</button>
+                                    <button class="btn btn-danger">✗</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin-top: 12px; border-radius: 4px; font-size: 13px;">
+                <strong>⚠ Conflicts detected:</strong> Jul 6, Jul 13, and Jul 20 are requested by both workers. Linda (higher seniority) has been allocated these weeks. Maria's requests for these weeks will be denied.
+            </div>
+        </div>
+
+        <!-- Packaging Department -->
+        <div class="department-section">
+            <div class="department-header">
+                <span>Packaging Department</span>
+                <span class="department-count">1 request</span>
+            </div>
+            <div class="table-container department-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Worker</th>
+                            <th>Seniority</th>
+                            <th>Entitlement</th>
+                            <th>Priority Weeks (in order)</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>
+                                <div class="worker-name">James Thompson</div>
+                                <div class="worker-dept">Packaging</div>
+                            </td>
+                            <td>3 years<br><small style="color: #666;">Aug 2022</small></td>
+                            <td><span class="badge badge-warning">4 weeks</span></td>
+                            <td>
+                                <div class="priority-weeks">
+                                    <div class="priority-week approved">
+                                        <span class="priority-number">1</span>
+                                        <span>Jul 13</span>
+                                    </div>
+                                    <div class="priority-week approved">
+                                        <span class="priority-number">2</span>
+                                        <span>Jul 20</span>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">3</span>
+                                        <span>Jun 1</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">4</span>
+                                        <span>Jun 8</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">5</span>
+                                        <span>Jun 15</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">6</span>
+                                        <span>Jun 22</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">7</span>
+                                        <span>Jun 29</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                    <div class="priority-week">
+                                        <span class="priority-number">8</span>
+                                        <span>Jul 6</span>
+                                        <div class="week-actions">
+                                            <button class="week-btn week-btn-approve" title="Approve week">✓</button>
+                                            <button class="week-btn week-btn-deny" title="Deny week">✗</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge badge-warning">2/4 Pending</span>
+                            </td>
+                            <td>
+                                <div class="actions">
+                                    <button class="btn btn-success">✓</button>
+                                    <button class="btn btn-danger">✗</button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div style="background: white; padding: 16px; border-radius: 8px; margin-top: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h3 style="margin-bottom: 12px; font-size: 16px;">Key Features:</h3>
+            <ul style="list-style: none; padding-left: 0;">
+                <li style="margin-bottom: 8px;">✓ <strong>Auto-Allocate:</strong> Click "Auto-Allocate All Requests" to automatically allocate weeks based on seniority and priority order</li>
+                <li style="margin-bottom: 8px;">✓ <strong>Reset All:</strong> Click "Reset All Approvals" to clear all approvals and revert all requests to pending</li>
+                <li style="margin-bottom: 8px;">✓ <strong>Individual week approval:</strong> Each week has ✓ (approve) and ✗ (deny) buttons</li>
+                <li style="margin-bottom: 8px;">✓ <strong>Revert actions:</strong> Click × on approved/denied weeks to revert them back to pending</li>
+                <li style="margin-bottom: 8px;">✓ Requests grouped by department for easy conflict identification</li>
+                <li style="margin-bottom: 8px;">✓ Yellow/orange weeks with ⚠ = conflicts between workers in same department</li>
+                <li style="margin-bottom: 8px;">✓ Green = approved, Red = denied, Gray = pending</li>
+                <li style="margin-bottom: 8px;">✓ Higher seniority workers get priority in conflict resolution</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
