@@ -10,8 +10,6 @@ interface VacationRequest {
   status: RequestStatus;
   submittedDate: Date;
   prioritizedWeeks?: string[];
-  firstChoiceWeeks?: string[];
-  secondChoiceWeeks?: string[];
   approvedWeeks?: string[];
   deniedWeeks?: string[];
 }
@@ -114,9 +112,8 @@ export default function MyRequestsList({ requests, conflictingWeeks = [] }: MyRe
       )}
       
       {requests.map((request) => {
-        // Get weeks (prioritized or legacy)
-        const prioritizedWeeks = request.prioritizedWeeks || 
-          [...(request.firstChoiceWeeks || []), ...(request.secondChoiceWeeks || [])];
+        // Get prioritized weeks
+        const prioritizedWeeks = request.prioritizedWeeks || [];
         const showWeeks = prioritizedWeeks.length > 0;
         
         return (

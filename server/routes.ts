@@ -152,37 +152,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Only check conflicts within the same department
         if (worker1.department !== worker2.department) continue;
         
-        const conflictTypes: string[] = [];
+        // Get weeks for both requests (prioritized only)
+        const req1Weeks = req1.prioritizedWeeks || [];
+        const req2Weeks = req2.prioritizedWeeks || [];
         
-        // Get weeks for both requests (prioritized or legacy)
-        const req1Weeks = req1.prioritizedWeeks || 
-          [...(req1.firstChoiceWeeks || []), ...(req1.secondChoiceWeeks || [])];
-        const req2Weeks = req2.prioritizedWeeks || 
-          [...(req2.firstChoiceWeeks || []), ...(req2.secondChoiceWeeks || [])];
-        
-        // Check if weeks overlap (for priority-based, just check overlap)
+        // Check if weeks overlap
         if (weeksOverlap(req1Weeks, req2Weeks)) {
-          conflictTypes.push('priority-overlap');
-        }
-        
-        // Also check legacy combinations for backward compatibility
-        if (req1.firstChoiceWeeks && req2.firstChoiceWeeks && weeksOverlap(req1.firstChoiceWeeks, req2.firstChoiceWeeks)) {
-          conflictTypes.push('first-first');
-        }
-        if (req1.firstChoiceWeeks && req2.secondChoiceWeeks && weeksOverlap(req1.firstChoiceWeeks, req2.secondChoiceWeeks)) {
-          conflictTypes.push('first-second');
-        }
-        if (req1.secondChoiceWeeks && req2.firstChoiceWeeks && weeksOverlap(req1.secondChoiceWeeks, req2.firstChoiceWeeks)) {
-          conflictTypes.push('second-first');
-        }
-        if (req1.secondChoiceWeeks && req2.secondChoiceWeeks && weeksOverlap(req1.secondChoiceWeeks, req2.secondChoiceWeeks)) {
-          conflictTypes.push('second-second');
-        }
-        
-        if (conflictTypes.length > 0) {
           conflictingWith.push({
             requestId: req2.id,
-            conflictType: conflictTypes.join(', ')
+            conflictType: 'priority-overlap'
           });
           conflictSet.add(req1.id);
           conflictSet.add(req2.id);
@@ -190,9 +168,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (conflictingWith.length > 0) {
-        // Get weeks (prioritized or legacy)
-        const weeks = req1.prioritizedWeeks || 
-          [...(req1.firstChoiceWeeks || []), ...(req1.secondChoiceWeeks || [])];
+        // Get prioritized weeks
+        const weeks = req1.prioritizedWeeks || [];
         
         conflicts.push({
           requestId: req1.id,
@@ -201,8 +178,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           joiningDate: worker1.joiningDate,
           conflictingWith,
           choices: {
-            first: req1.firstChoiceWeeks || [],
-            second: req1.secondChoiceWeeks || [],
+            first: [],
+            second: [],
             prioritized: weeks
           }
         });
@@ -242,9 +219,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     // For each of the worker's requests
     for (const myRequest of pendingWorkerRequests) {
-      // Get my weeks (prioritized or legacy)
-      const myWeeks = myRequest.prioritizedWeeks || 
-        [...(myRequest.firstChoiceWeeks || []), ...(myRequest.secondChoiceWeeks || [])];
+      // Get my prioritized weeks
+      const myWeeks = myRequest.prioritizedWeeks || [];
       
       // Check against other workers' requests
       for (const otherRequest of allPendingRequests) {
@@ -261,9 +237,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue;
         }
         
-        // Get other worker's weeks (prioritized or legacy)
-        const otherWeeks = otherRequest.prioritizedWeeks || 
-          [...(otherRequest.firstChoiceWeeks || []), ...(otherRequest.secondChoiceWeeks || [])];
+        // Get other worker's prioritized weeks
+        const otherWeeks = otherRequest.prioritizedWeeks || [];
         
         // Check conflicts in my weeks
         myWeeks.forEach(week => {
@@ -299,60 +274,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Handle new priority-based system
-      if (validatedData.prioritizedWeeks && validatedData.prioritizedWeeks.length > 0) {
-        // Validate all week dates are in 2026
-        const invalidDates = validatedData.prioritizedWeeks.filter(date => !isDateIn2026(date));
-        if (invalidDates.length > 0) {
-          return res.status(400).json({ 
-            error: `All weeks must be in 2026. Invalid dates: ${invalidDates.join(', ')}` 
-          });
-        }
-        
-        // Validate week count: must be between 1 and 2× entitlement
-        const maxWeeks = weeksEntitled * 2;
-        if (validatedData.prioritizedWeeks.length === 0) {
-          return res.status(400).json({ 
-            error: "You must select at least 1 priority week"
-          });
-        }
-        if (validatedData.prioritizedWeeks.length > maxWeeks) {
-          return res.status(400).json({ 
-            error: `You can select up to ${maxWeeks} priority weeks (2× your entitlement of ${weeksEntitled} weeks). You selected ${validatedData.prioritizedWeeks.length} weeks.` 
-          });
-        }
-        
-        // Check for duplicates
-        const uniqueWeeks = new Set(validatedData.prioritizedWeeks);
-        if (uniqueWeeks.size !== validatedData.prioritizedWeeks.length) {
-          return res.status(400).json({ error: "Duplicate weeks are not allowed" });
-        }
-      } else {
-        // Legacy validation for first/second choice
-        if (!validatedData.firstChoiceWeeks || !validatedData.secondChoiceWeeks) {
-          return res.status(400).json({ error: "Must provide either prioritizedWeeks or both firstChoiceWeeks and secondChoiceWeeks" });
-        }
-        
-        // Validate all week dates are in 2026
-        const allWeeks = [...validatedData.firstChoiceWeeks, ...validatedData.secondChoiceWeeks];
-        if (!allWeeks.every(isDateIn2026)) {
-          return res.status(400).json({ error: "All weeks must be in 2026" });
-        }
-        
-        // Validate week counts against entitlement
-        const firstChoiceWeekCount = validatedData.firstChoiceWeeks.length;
-        const secondChoiceWeekCount = validatedData.secondChoiceWeeks.length;
-        
-        if (firstChoiceWeekCount > weeksEntitled) {
-          return res.status(400).json({ 
-            error: `First choice (${firstChoiceWeekCount} weeks) exceeds entitlement (${weeksEntitled} weeks)` 
-          });
-        }
-        if (secondChoiceWeekCount > weeksEntitled) {
-          return res.status(400).json({ 
-            error: `Second choice (${secondChoiceWeekCount} weeks) exceeds entitlement (${weeksEntitled} weeks)` 
-          });
-        }
+      // Validate prioritized weeks (required field)
+      if (!validatedData.prioritizedWeeks || validatedData.prioritizedWeeks.length === 0) {
+        return res.status(400).json({ 
+          error: "You must select at least 1 priority week"
+        });
+      }
+      
+      // Validate all week dates are in 2026
+      const invalidDates = validatedData.prioritizedWeeks.filter(date => !isDateIn2026(date));
+      if (invalidDates.length > 0) {
+        return res.status(400).json({ 
+          error: `All weeks must be in 2026. Invalid dates: ${invalidDates.join(', ')}` 
+        });
+      }
+      
+      // Validate week count: must be between 1 and 2× entitlement
+      const maxWeeks = weeksEntitled * 2;
+      if (validatedData.prioritizedWeeks.length > maxWeeks) {
+        return res.status(400).json({ 
+          error: `You can select up to ${maxWeeks} priority weeks (2× your entitlement of ${weeksEntitled} weeks). You selected ${validatedData.prioritizedWeeks.length} weeks.` 
+        });
+      }
+      
+      // Check for duplicates
+      const uniqueWeeks = new Set(validatedData.prioritizedWeeks);
+      if (uniqueWeeks.size !== validatedData.prioritizedWeeks.length) {
+        return res.status(400).json({ error: "Duplicate weeks are not allowed" });
       }
       
       const request = await storage.createVacationRequest(validatedData);
@@ -476,19 +424,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const result = requestResults.get(request.id)!;
         const departmentWeeks = allocatedWeeksByDepartment.get(worker.department)!;
         
-        // Get weeks in priority order (prioritizedWeeks or legacy first/second choice)
-        let weeksToProcess: string[] = [];
-        
-        if (request.prioritizedWeeks && request.prioritizedWeeks.length > 0) {
-          // New priority-based system: process weeks in priority order
-          weeksToProcess = request.prioritizedWeeks;
-        } else {
-          // Legacy system: process first choice, then second choice
-          weeksToProcess = [
-            ...(request.firstChoiceWeeks || []),
-            ...(request.secondChoiceWeeks || [])
-          ];
-        }
+        // Get prioritized weeks (process in priority order)
+        const weeksToProcess = request.prioritizedWeeks || [];
         
         // Process weeks in priority order (index 0 = highest priority)
         for (const week of weeksToProcess) {
@@ -523,9 +460,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const { request } of requestsWithWorkers) {
         const result = requestResults.get(request.id)!;
         
-        // Get all weeks that should be processed
-        const allWeeks = request.prioritizedWeeks || 
-          [...(request.firstChoiceWeeks || []), ...(request.secondChoiceWeeks || [])];
+        // Get all prioritized weeks
+        const allWeeks = request.prioritizedWeeks || [];
         
         // Ensure all weeks are accounted for
         for (const week of allWeeks) {

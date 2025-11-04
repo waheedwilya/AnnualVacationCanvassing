@@ -255,12 +255,9 @@ export default function SupervisorApp() {
     conflictingWeeks: Set<string>; // Weeks that conflict with other workers in same department
   };
 
-  // Get all weeks for a request (prioritized or legacy)
+  // Get prioritized weeks for a request
   const getRequestWeeks = (req: VacationRequest): string[] => {
-    if (req.prioritizedWeeks && req.prioritizedWeeks.length > 0) {
-      return req.prioritizedWeeks;
-    }
-    return [...(req.firstChoiceWeeks || []), ...(req.secondChoiceWeeks || [])];
+    return req.prioritizedWeeks || [];
   };
 
   // Create request rows with priority weeks
@@ -353,8 +350,6 @@ export default function SupervisorApp() {
         hasConflict: false, // We'll add this later if needed
         conflictDetails: undefined,
         prioritizedWeeks: req.prioritizedWeeks,
-        firstChoiceWeeks: req.firstChoiceWeeks,
-        secondChoiceWeeks: req.secondChoiceWeeks,
         allocatedChoice: req.allocatedChoice,
         approvedWeeks: req.approvedWeeks,
         deniedWeeks: req.deniedWeeks,

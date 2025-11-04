@@ -17,8 +17,7 @@ interface VacationRequest {
   status: RequestStatus;
   hasConflict?: boolean;
   conflictDetails?: string;
-  firstChoiceWeeks?: string[];
-  secondChoiceWeeks?: string[];
+  prioritizedWeeks?: string[];
   allocatedChoice?: string | null;
   approvedWeeks?: string[];
   deniedWeeks?: string[];
@@ -99,7 +98,7 @@ export default function RequestCard({
   onUpdateWeeks,
   showActions = true 
 }: RequestCardProps) {
-  const showWeeks = request.firstChoiceWeeks && request.secondChoiceWeeks;
+  const prioritizedWeeks = request.prioritizedWeeks || [];
   
   // Initialize state from request data
   const [approvedWeeks, setApprovedWeeks] = useState<Set<string>>(
@@ -156,11 +155,11 @@ export default function RequestCard({
     }
   };
   
-  // Combine all weeks from both choices
-  const allWeeks = [
-    ...(request.firstChoiceWeeks || []).map(week => ({ week, choice: 'first' as const })),
-    ...(request.secondChoiceWeeks || []).map(week => ({ week, choice: 'second' as const })),
-  ];
+  // Get all prioritized weeks
+  const allWeeks = prioritizedWeeks.map((week, index) => ({ 
+    week, 
+    choice: index < Math.ceil(prioritizedWeeks.length / 2) ? 'first' as const : 'second' as const 
+  }));
 
   return (
     <Card data-testid={`request-card-${request.id}`}>
@@ -221,14 +220,14 @@ export default function RequestCard({
               ))}
             </div>
           </div>
-        ) : showWeeks ? (
+        ) : prioritizedWeeks.length > 0 ? (
           <div className="space-y-3">
             <div>
               <p className="text-sm font-medium text-foreground mb-2">
-                First Choice ({request.firstChoiceWeeks!.length} {request.firstChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
+                Priority Weeks ({prioritizedWeeks.length} {prioritizedWeeks.length === 1 ? 'week' : 'weeks'}):
               </p>
               <div className="flex flex-wrap gap-2">
-                {request.firstChoiceWeeks!.map((weekStart) => {
+                {prioritizedWeeks.map((weekStart, index) => {
                   const start = new Date(weekStart);
                   const end = addDays(start, 6);
                   const isApproved = request.approvedWeeks?.includes(weekStart);
@@ -244,39 +243,9 @@ export default function RequestCard({
                           : 'bg-primary/10 text-primary'
                       }`}
                       data-testid={`week-${weekStart}`}
+                      title={`Priority ${index + 1}`}
                     >
-                      {format(start, 'MMM d')} - {format(end, 'MMM d')}
-                      {isApproved && <Check className="h-3 w-3 ml-2" />}
-                      {isDenied && <X className="h-3 w-3 ml-2" />}
-                    </span>
-                  );
-                })}
-              </div>
-            </div>
-            
-            <div>
-              <p className="text-sm font-medium text-foreground mb-2">
-                Second Choice ({request.secondChoiceWeeks!.length} {request.secondChoiceWeeks!.length === 1 ? 'week' : 'weeks'}):
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {request.secondChoiceWeeks!.map((weekStart) => {
-                  const start = new Date(weekStart);
-                  const end = addDays(start, 6);
-                  const isApproved = request.approvedWeeks?.includes(weekStart);
-                  const isDenied = request.deniedWeeks?.includes(weekStart);
-                  return (
-                    <span 
-                      key={weekStart}
-                      className={`inline-flex items-center px-3 py-1.5 rounded-md text-sm font-medium ${
-                        isApproved
-                          ? 'bg-success/10 text-success' 
-                          : isDenied
-                          ? 'bg-destructive/10 text-destructive'
-                          : 'bg-primary/10 text-primary'
-                      }`}
-                      data-testid={`week-${weekStart}`}
-                    >
-                      {format(start, 'MMM d')} - {format(end, 'MMM d')}
+                      #{index + 1}: {format(start, 'MMM d')} - {format(end, 'MMM d')}
                       {isApproved && <Check className="h-3 w-3 ml-2" />}
                       {isDenied && <X className="h-3 w-3 ml-2" />}
                     </span>

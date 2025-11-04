@@ -84,9 +84,8 @@ export default function WorkerApp() {
       const worker = workerMap.get(request.workerId);
       if (!worker || worker.department !== currentWorker.department) continue;
       
-      // Get all weeks (prioritized or legacy) - don't just check approved
-      const weeks = request.prioritizedWeeks || 
-        [...(request.firstChoiceWeeks || []), ...(request.secondChoiceWeeks || [])];
+      // Get prioritized weeks
+      const weeks = request.prioritizedWeeks || [];
       
       // Count approved weeks (already allocated)
       const approvedWeeks = request.approvedWeeks || [];
@@ -233,8 +232,6 @@ export default function WorkerApp() {
                 : req.status as any,
               submittedDate: new Date(req.submittedAt),
               prioritizedWeeks: req.prioritizedWeeks,
-              firstChoiceWeeks: req.firstChoiceWeeks,
-              secondChoiceWeeks: req.secondChoiceWeeks,
               approvedWeeks: req.approvedWeeks,
               deniedWeeks: req.deniedWeeks,
             }))} />
